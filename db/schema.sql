@@ -115,6 +115,50 @@ CREATE INDEX IF NOT EXISTS idx_posts_author_created ON posts(author_id, created_
 CREATE INDEX IF NOT EXISTS idx_comments_post_created ON comments(post_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_connections_user ON connections(user_id);
 
+-- User profile (extended)
+CREATE TABLE IF NOT EXISTS user_profiles (
+  user_id UUID PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT,
+  location TEXT,
+  about TEXT,
+  banner_url TEXT,
+  highlights TEXT[] DEFAULT '{}',
+  connections_count INT DEFAULT 0,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS user_experiences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  company TEXT NOT NULL DEFAULT '',
+  role TEXT NOT NULL DEFAULT '',
+  period TEXT NOT NULL DEFAULT '',
+  summary TEXT NOT NULL DEFAULT '',
+  skills TEXT[] DEFAULT '{}',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_experiences_user_sort ON user_experiences(user_id, sort_order);
+
+CREATE TABLE IF NOT EXISTS user_education (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  school TEXT NOT NULL DEFAULT '',
+  degree TEXT NOT NULL DEFAULT '',
+  period TEXT NOT NULL DEFAULT '',
+  sort_order INT NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_education_user_sort ON user_education(user_id, sort_order);
+
+CREATE TABLE IF NOT EXISTS user_skills (
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  skill TEXT NOT NULL,
+  PRIMARY KEY (user_id, skill)
+);
+
 -- Jobs feature
 CREATE TABLE IF NOT EXISTS jobs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

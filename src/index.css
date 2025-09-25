@@ -89,6 +89,111 @@ body, html {
   @apply dark:bg-white/10 dark:text-slate-300;
 }
 
+/* Vibrant skill pills */
+.pill-vibrant {
+  @apply text-white shadow-sm;
+  background-image: linear-gradient(135deg, #00bfff, #cc00ff);
+  box-shadow: 0 6px 14px rgba(0,191,255,0.18), 0 4px 10px rgba(204,0,255,0.14);
+}
+.pill-vibrant:hover { filter: brightness(1.06); }
+.pill-cyan { background-image: linear-gradient(135deg, #22d3ee, #3b82f6); }
+.pill-magenta { background-image: linear-gradient(135deg, #f472b6, #a855f7); }
+.pill-purple { background-image: linear-gradient(135deg, #8b5cf6, #ec4899); }
+.pill-azure { background-image: linear-gradient(135deg, #06b6d4, #0ea5e9); }
+
+/* Unique profile aesthetics */
+.banner-gradient {
+  background: radial-gradient(1200px 400px at 10% -10%, rgba(0,191,255,0.35) 0%, rgba(0,191,255,0.08) 30%, transparent 55%),
+              radial-gradient(1000px 500px at 110% 10%, rgba(204,0,255,0.35) 0%, rgba(204,0,255,0.08) 35%, transparent 60%),
+              linear-gradient(135deg, #1a1c2c 0%, #1f2022 100%);
+}
+
+.btn-gradient {
+  @apply inline-flex items-center justify-center rounded-lg px-4 py-2 font-medium transition shadow-sm focus:outline-none focus:ring-2 text-white;
+  background-image: linear-gradient(90deg, #00bfff, #cc00ff);
+  box-shadow: 0 10px 20px rgba(0,191,255,0.18), 0 6px 12px rgba(204,0,255,0.15);
+}
+.btn-gradient:hover { filter: brightness(1.05); }
+.btn-gradient:active { filter: brightness(0.98); }
+.btn-gradient:focus { box-shadow: 0 0 0 3px rgba(0,191,255,0.25); }
+
+.glow-accent:hover {
+  box-shadow: 0 12px 30px rgba(0,191,255,0.10), 0 8px 20px rgba(204,0,255,0.10);
+}
+
+.diagonal-section {
+  position: relative;
+  overflow: hidden;
+}
+.diagonal-section:before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 60%, rgba(255,255,255,0.04) 60.5%);
+  pointer-events: none;
+}
+
+/* Alternate diagonal accent */
+.diagonal-section-alt { position: relative; overflow: hidden; }
+.diagonal-section-alt:before {
+  content: "";
+  position: absolute; inset: 0;
+  background: linear-gradient(225deg, transparent 62%, rgba(255,255,255,0.045) 62.5%);
+  pointer-events: none;
+}
+
+/* Overlapping utilities */
+.overlap-up { margin-top: -1.25rem; position: relative; z-index: 10; }
+.overlap-more { margin-top: -2rem; position: relative; z-index: 10; }
+
+/* Accent ribbon on a card corner */
+.accent-ribbon { position: relative; overflow: hidden; }
+.accent-ribbon:after {
+  content: "";
+  position: absolute;
+  top: -10px; right: -60px;
+  width: 160px; height: 80px;
+  transform: rotate(35deg);
+  background-image: linear-gradient(90deg, #00bfff, #cc00ff);
+  opacity: 0.2;
+  filter: blur(0.3px);
+}
+
+/* Vertical timeline */
+.timeline {
+  position: relative;
+  padding-left: 1.25rem;
+}
+.timeline:before {
+  content: "";
+  position: absolute;
+  left: 8px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: linear-gradient(180deg, #00bfff, #cc00ff);
+  opacity: 0.6;
+}
+.timeline-item {
+  position: relative;
+}
+.timeline-item:before {
+  content: "";
+  position: absolute;
+  left: -1px;
+  top: 6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(0,191,255,0.35), 0 0 0 6px rgba(204,0,255,0.20);
+}
+
+/* Skill cloud sizing */
+.skill-lg { transform: scale(1.08); }
+.skill-md { transform: scale(1.0); }
+.skill-sm { transform: scale(0.92); opacity: 0.9; }
+
 /* Micro animations */
 .animate-fade-in {
   animation: fade-in 300ms ease-out both;

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../App.jsx'
 import { icons } from '../assets/icons.jsx'
 import { io } from 'socket.io-client'
-
+import MeCard from '../components/MeCard.jsx'
 // API base for dev/prod
 const API_BASE = import.meta?.env?.VITE_API_URL || 'http://localhost:5174'
 // API helper: sends cookies for JWT
@@ -246,25 +246,10 @@ export default function Home() {
           {/* Left Sidebar */}
           <div className="lg:col-span-3 space-y-6">
             {/* Profile Card */}
-            <div className="card p-6">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-startx-600 rounded-full mx-auto mb-4 flex items-center justify-center text-white text-2xl font-bold shadow-sm">
-                  U
-                </div>
-                <h3 className="font-semibold text-slate-900 text-lg">Your Name</h3>
-                <p className="text-sm text-slate-600">Software Developer</p>
-                <div className="mt-4 pt-4 border-t border-slate-200">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-slate-600">Profile views</span>
-                    <span className="font-medium text-slate-900">89</span>
-                  </div>
-                  <div className="flex justify-between text-sm mt-1">
-                    <span className="text-slate-600">Post impressions</span>
-                    <span className="font-medium text-slate-900">1,234</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+          <MeCard
+            profile={profile}
+            contactText="Contact Me"
+          />
 
             {/* Quick Actions */}
             <div className="card p-6">

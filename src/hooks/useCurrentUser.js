@@ -27,6 +27,8 @@ export function useCurrentUser() {
   const { user, isLoaded } = useClerkUser()
   const [error, setError] = useState(null)
   const [serverUser, setServerUser] = useState(null)
+  const [backendProfile, setBackendProfile] = useState(null)
+  const [isFetching, setIsFetching] = useState(false)
   const [overridesVersion, setOverridesVersion] = useState(0)
 
   // Optionally, map Clerk user to backend user for future persistence
@@ -35,9 +37,6 @@ export function useCurrentUser() {
     const linkOrEnsure = async () => {
       if (!user) return
       try {
-        // If your backend supports ensure-user by email, you could call it here
-        // and then fetch additional server-only fields. Safe to skip if not available.
-        // Keeping try/catch silent to avoid blocking UI.
         const localId = user.id
         setServerUser({ id: localId, name: user.fullName || user.firstName || 'Anonymous', email: user.primaryEmailAddress?.emailAddress || '' })
       } catch (e) {
@@ -47,6 +46,27 @@ export function useCurrentUser() {
     linkOrEnsure()
     return () => { ignore = true }
   }, [user])
+
+  // Fetch backend profile once the user is loaded
+  useEffect(() => {
+    let cancelled = false
+    const run = async () => {
+      if (!isLoaded || !user) return
+      setIsFetching(true)
+      try {
+        const res = await apiFetch('/api/users/me/profile')
+        if (!res.ok) throw new Error('Failed to fetch profile')
+        const data = await res.json()
+        if (!cancelled) setBackendProfile(data)
+      } catch (e) {
+        if (!cancelled) setError(e)
+      } finally {
+        if (!cancelled) setIsFetching(false)
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  }, [isLoaded, user?.id])
 
   // Listen for cross-component override updates
   useEffect(() => {
@@ -63,26 +83,68 @@ export function useCurrentUser() {
     const key = user.id
     const o = overrides[key] || {}
     const baseName = user.fullName || [user.firstName, user.lastName].filter(Boolean).join(' ') || 'Anonymous'
-    return {
-      id: key,
-      name: o.name || baseName,
-      headline: o.headline || '',
-      email: user.primaryEmailAddress?.emailAddress || serverUser?.email || '',
-      // editable client-side additions
-      title: o.title || 'Software Professional',
-      location: o.location || 'India',
-      connections: o.connections ?? 500,
-      about: o.about || '',
-      experience: Array.isArray(o.experience) ? o.experience : [],
-      education: Array.isArray(o.education) ? o.education : [],
-      skills: Array.isArray(o.skills) ? o.skills : [],
-      avatarUrl: o.avatarUrl || user.imageUrl || null,
-      bannerUrl: o.bannerUrl || null,
-    }
-  }, [user, isLoaded, overrides, serverUser])
 
-  const updateProfile = (partial) => {
+    // Start from backend profile if available, otherwise Clerk-derived defaults
+    const fromBackend = backendProfile ? {
+      id: backendProfile.id || key,
+      name: backendProfile.name || baseName,
+      headline: backendProfile.headline || '',
+      email: backendProfile.email || user.primaryEmailAddress?.emailAddress || serverUser?.email || '',
+      title: backendProfile.title || 'Software Professional',
+      location: backendProfile.location || 'India',
+      connections: backendProfile.connections ?? 500,
+      about: backendProfile.about || '',
+      experience: Array.isArray(backendProfile.experience) ? backendProfile.experience : [],
+      education: Array.isArray(backendProfile.education) ? backendProfile.education : [],
+      skills: Array.isArray(backendProfile.skills) ? backendProfile.skills : [],
+      avatarUrl: backendProfile.avatarUrl || user.imageUrl || null,
+      bannerUrl: backendProfile.bannerUrl || null,
+      highlights: Array.isArray(backendProfile.highlights) ? backendProfile.highlights : [],
+    } : {
+      id: key,
+      name: baseName,
+      headline: '',
+      email: user.primaryEmailAddress?.emailAddress || serverUser?.email || '',
+      title: 'Software Professional',
+      location: 'India',
+      connections: 500,
+      about: '',
+      experience: [],
+      education: [],
+      skills: [],
+      avatarUrl: user.imageUrl || null,
+      bannerUrl: null,
+      highlights: [],
+    }
+
+    // Apply overrides last (local edits and UI-only values)
+    return {
+      ...fromBackend,
+      ...o,
+      experience: Array.isArray(o.experience) ? o.experience : fromBackend.experience,
+      education: Array.isArray(o.education) ? o.education : fromBackend.education,
+      skills: Array.isArray(o.skills) ? o.skills : fromBackend.skills,
+      highlights: Array.isArray(o.highlights) ? o.highlights : fromBackend.highlights,
+    }
+  }, [user, isLoaded, overrides, serverUser, backendProfile])
+
+  const updateProfile = async (partial) => {
     if (!user?.id) return
+    // Persist to backend first; fall back to overrides if it fails
+    try {
+      const res = await apiFetch('/api/users/me/profile', {
+        method: 'PUT',
+        body: JSON.stringify(partial || {}),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setBackendProfile(data)
+      }
+    } catch (e) {
+      // Non-fatal; still apply local overrides
+      setError(e)
+    }
+
     const all = readOverrides()
     const current = all[user.id] || {}
     const next = { ...current, ...partial }
@@ -99,7 +161,7 @@ export function useCurrentUser() {
     try { window.dispatchEvent(new Event('sx_profile_overrides_updated')) } catch {}
   }
 
-  return { profile, loading: !isLoaded, error, updateProfile, clearProfileOverrides }
+  return { profile, loading: !isLoaded || isFetching, error, updateProfile, clearProfileOverrides }
 }
 
 

@@ -1,0 +1,137 @@
+.pc-card-wrapper {
+  --card-opacity: 0.85;
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  perspective: 1200px;
+  filter: drop-shadow(0 12px 40px rgba(0,0,0,0.35));
+  display: block;
+}
+
+.pc-card-wrapper.active { --card-opacity: 1; }
+
+.pc-card {
+  position: relative;
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.45);
+  -webkit-backdrop-filter: blur(25px) saturate(120%);
+  backdrop-filter: blur(25px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  overflow: hidden;
+  transform-style: preserve-3d;
+  transform: rotateX(var(--rotate-y, 0)) rotateY(var(--rotate-x, 0));
+  transition: box-shadow 220ms ease;
+  width: 100%;
+  min-height: 420px;
+  box-shadow: 0 18px 48px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.pc-card:hover {
+  border-color: rgba(255,255,255,0.28);
+  box-shadow: 0 24px 60px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.pc-inside {
+  position: relative;
+  padding: 28px 24px 92px; /* reserve space for bottom bar */
+  background: transparent;
+}
+
+.pc-aurora {
+  position: absolute;
+  inset: -10% -15% -10% -15%;
+  background: radial-gradient(40% 50% at 30% 20%, rgba(59,130,246,0.45), transparent 70%),
+              radial-gradient(45% 55% at 70% 60%, rgba(168,85,247,0.35), transparent 70%);
+  filter: blur(100px);
+  z-index: 0;
+}
+
+.pc-shine,
+.pc-glare {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+}
+
+.pc-shine {
+  background: radial-gradient(400px 200px at var(--pointer-x) var(--pointer-y), rgba(255,255,255,0.14), transparent 60%);
+  mix-blend-mode: soft-light;
+}
+
+.pc-glare {
+  background: radial-gradient(350px 350px at var(--pointer-x) var(--pointer-y), rgba(255,255,255,0.05), transparent 60%);
+}
+
+.pc-content {
+  position: relative;
+  z-index: 2;
+}
+
+.pc-avatar-content { display: grid; place-items: center; margin-top: 6px; }
+
+.pc-details { text-align: center; color: #e6e6f0; }
+.pc-details h3 { font-size: clamp(22px, 5vw, 28px); line-height: 1.15; font-weight: 800; letter-spacing: 0.2px; margin: 14px 0 6px; }
+.pc-details p { font-size: clamp(12px, 3.2vw, 14px); line-height: 1.2; color: rgba(226,232,240,0.85); font-weight: 500; }
+
+.avatar {
+  width: clamp(140px, 55%, 220px);
+  height: clamp(140px, 55%, 220px);
+  border-radius: 9999px;
+  object-fit: cover;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 0 0 1px rgba(255,255,255,0.06) inset;
+  margin-bottom: 12px;
+}
+
+.pc-user-info {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 16px;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  background: rgba(15, 23, 42, 0.55);
+  color: #eef2ff;
+  min-height: 56px;
+}
+
+.pc-status-row { display: inline-flex; align-items: center; gap: 8px; }
+.pc-status-dot { width: 8px; height: 8px; border-radius: 9999px; background: #10b981; box-shadow: 0 0 10px rgba(16,185,129,0.8); animation: pcPulse 2s ease-in-out infinite; }
+.pc-status-text { font-size: 12px; opacity: 0.95; }
+
+.pc-contact-btn {
+  border: 0;
+  color: white;
+  background: linear-gradient(135deg, #22d3ee 0%, #8b5cf6 100%);
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(139,92,246,0.35);
+  transition: transform 150ms ease, box-shadow 150ms ease, opacity 150ms ease;
+}
+.pc-contact-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(139,92,246,0.45); }
+.pc-contact-btn:active { transform: translateY(0); box-shadow: 0 8px 18px rgba(139,92,246,0.35); }
+.pc-contact-btn:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+
+@keyframes pcPulse {
+  0%, 100% { transform: scale(1); box-shadow: 0 0 8px rgba(16,185,129,0.7); }
+  50% { transform: scale(1.15); box-shadow: 0 0 14px rgba(16,185,129,0.9); }
+}
+
+@media (max-width: 480px) {
+  .avatar { width: 160px; height: 160px; }
+  .pc-card { min-height: 360px; }
+}
+
+

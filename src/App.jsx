@@ -2,6 +2,7 @@ import React, { useState, createContext, useContext, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import Header from './components/Header.jsx'
 import PublicHeader from './components/PublicHeader.jsx'
+import { ScrollProgress } from '@/registry/magicui/scroll-progress'
 import Footer from './components/Footer.jsx'
 import AuthModal from './components/AuthModal.jsx'
 import Home from './pages/Home.jsx'
@@ -113,6 +114,7 @@ function AppContent() {
         <SignedOut>
           <PublicHeader />
         </SignedOut>
+        <ScrollProgress className="top-[65px]" />
         <main>
           <Routes>
             <Route path="/" element={isSignedIn ? <Home /> : <Landing />} />
