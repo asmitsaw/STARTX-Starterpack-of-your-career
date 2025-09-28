@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../App.jsx'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5174'
 

@@ -50,7 +50,7 @@ router.get('/feed', requireAuth, async (req, res, next) => {
       cursorClause = 'AND p.created_at < $3::timestamptz'
     }
     const sql = `
-      SELECT p.*, u.name, u.headline
+      SELECT p.*, u.name, u.headline, u.avatar_url, u.id as user_id
       FROM posts p
       JOIN users u ON u.id = p.author_id
       WHERE (

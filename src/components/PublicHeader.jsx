@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import Logo from './Logo.jsx'
-import { useAuth } from '../App.jsx'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 export default function PublicHeader() {
   const { openAuthModal } = useAuth()

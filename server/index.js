@@ -14,6 +14,8 @@ import previewRoutes from './routes/preview.js'
 import { errorHandler } from './middleware/error.js'
 import jobsRoutes from './routes/jobs.js'
 import messagesRoutes from './routes/messages.js'
+import uploadRoutes from './routes/upload.js'
+import pitchesRoutes from './routes/pitches.js'
 
 const app = express()
 const server = http.createServer(app)
@@ -42,6 +44,12 @@ io.on('connection', (socket) => {
     if (!conversationId) return
     socket.join(`conversation:${conversationId}`)
   })
+  
+  // Join user-specific room for connection updates
+  socket.on('user:join', (userId) => {
+    if (!userId) return
+    socket.join(`user:${userId}`)
+  })
 })
 
 app.get('/api/health', (req, res) => {
@@ -53,10 +61,28 @@ app.use('/api/users', userRoutes)
 app.use('/api/posts', postRoutesFactory(io))
 app.use('/api/trending', trendingRoutes)
 app.use('/api/jobs', jobsRoutes)
-app.use('/api/preview', previewRoutes)
 app.use('/api/messages', messagesRoutes)
+app.use('/api/preview', previewRoutes)
+app.use('/api/upload', uploadRoutes)
+app.use('/api/pitches', pitchesRoutes)
 
 app.use(errorHandler)
+
+// --- Serve built frontend (SPA) when running only the API server ---
+// This lets you open http://localhost:5174/ directly after `npm run build`
+try {
+  const clientDir = path.resolve(process.cwd(), 'dist')
+  const clientIndexHtml = path.join(clientDir, 'index.html')
+
+  // Serve static assets from /dist
+  app.use(express.static(clientDir))
+
+  // SPA fallback for any non-API route
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api')) return next()
+    res.sendFile(clientIndexHtml)
+  })
+} catch {}
 
 const port = process.env.PORT || 5174
 server.listen(port, () => {

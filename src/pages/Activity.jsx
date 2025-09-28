@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react'
 import SegmentedTabs from '../components/SegmentedTabs.jsx'
-import { useAuth } from '../App.jsx'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 export default function Activity() {
   const { openAuthModal } = useAuth()

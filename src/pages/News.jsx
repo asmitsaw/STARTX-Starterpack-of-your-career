@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import mountains from '../assets/mountains.svg'
-import { useAuth } from '../App.jsx'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 export default function News() {
   const { openAuthModal } = useAuth()
@@ -99,9 +99,7 @@ export default function News() {
   const fetchTimerRef = useRef(null)
   const [filters, setFilters] = useState({
     q: '',
-    category: '',
-    country: '',
-    language: 'en',
+    careerField: 'technology',
   })
 
   function beginProgress() {
@@ -127,21 +125,24 @@ export default function News() {
   }
 
   function buildNewsApiUrl() {
-    // Use top-headlines when country/category provided, otherwise everything
-    const useTopHeadlines = Boolean(filters.country || filters.category)
-    const base = useTopHeadlines
-      ? 'https://newsapi.org/v2/top-headlines'
-      : 'https://newsapi.org/v2/everything'
+    // Always use everything endpoint with career-focused queries
+    const base = 'https://newsapi.org/v2/everything'
     const params = new URLSearchParams()
     params.set('apiKey', API_KEY)
-    if (filters.q) params.set('q', filters.q)
-    if (useTopHeadlines) {
-      if (filters.country) params.set('country', filters.country)
-      if (filters.category) params.set('category', filters.category)
-    } else {
-      if (filters.language) params.set('language', filters.language)
-      params.set('sortBy', 'publishedAt')
+    
+    // Build query with career field focus
+    let query = filters.q || ''
+    if (filters.careerField && filters.careerField !== 'all') {
+      // Add career field as a keyword to the search
+      query = query ? `${query} ${filters.careerField} career` : `${filters.careerField} career jobs`
+    } else if (!query) {
+      // Default to general career content if no specific field selected
+      query = 'career jobs professional development'
     }
+    
+    params.set('q', query)
+    params.set('sortBy', 'publishedAt')
+    params.set('language', 'en') // Keep English as default language
     params.set('pageSize', '20')
     return `${base}?${params.toString()}`
   }
@@ -163,7 +164,7 @@ export default function News() {
     }
   }
 
-  async function simulateFetchLatestArticles() {
+  async function fetchLatestArticles() {
     setIsLoading(true)
     beginProgress()
 
@@ -181,30 +182,36 @@ export default function News() {
             source: (r.source && r.source.name) || 'Unknown',
             time: r.publishedAt ? timeAgo(r.publishedAt) : 'just now',
             url: r.url || '',
-            imageUrl: r.urlToImage || '',
+            imageUrl: r.urlToImage || `https://picsum.photos/seed/news-${idx}/640/360`,
             content: r.description || r.content || '',
           }))
         : []
 
-      setArticles(mapped)
+      setArticles(mapped.length > 0 ? mapped : initialNews)
     } catch (err) {
-      // On failure, clear the list
-      setArticles([])
-      // Optionally: console.error(err)
+      console.error('Error fetching news:', err)
+      // On failure, use initial news data
+      setArticles(initialNews)
     } finally {
       setIsLoading(false)
       completeProgress()
     }
   }
 
+  // Function to handle refresh button click
+  function simulateFetchLatestArticles() {
+    if (isLoading) return
+    fetchLatestArticles()
+  }
+
   useEffect(() => {
     // Initial load
-    simulateFetchLatestArticles()
+    fetchLatestArticles()
     return () => {
       if (progressTimerRef.current) clearInterval(progressTimerRef.current)
       if (fetchTimerRef.current) clearTimeout(fetchTimerRef.current)
     }
-  }, [])
+  }, [filters.careerField, filters.q])
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
@@ -219,7 +226,7 @@ export default function News() {
       </div>
 
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">Tech News</h1>
+        <h1 className="text-2xl font-bold text-slate-900">Career News</h1>
         <button className="btn-outline" onClick={simulateFetchLatestArticles} disabled={isLoading}>
           {isLoading ? (
             <span className="inline-flex items-center gap-2">
@@ -232,50 +239,33 @@ export default function News() {
         </button>
       </div>
 
-      {/* Filters */}
-      <div className="mb-6 grid gap-3 md:grid-cols-4">
+      {/* Career Filters */}
+      <div className="mb-6 grid gap-3 md:grid-cols-2">
         <input
           className="input"
-          placeholder="Search keywords"
+          placeholder="Search career keywords"
           value={filters.q}
           onChange={(e) => setFilters((f) => ({ ...f, q: e.target.value }))}
         />
-        <select
-          className="input"
-          value={filters.category}
-          onChange={(e) => setFilters((f) => ({ ...f, category: e.target.value }))}
-        >
-          <option value="">All categories</option>
-          <option value="technology">Technology</option>
-          <option value="science">Science</option>
-          <option value="business">Business</option>
-          <option value="entertainment">Entertainment</option>
-          <option value="sports">Sports</option>
-          <option value="health">Health</option>
-        </select>
-        <select
-          className="input"
-          value={filters.country}
-          onChange={(e) => setFilters((f) => ({ ...f, country: e.target.value }))}
-        >
-          <option value="">All countries</option>
-          <option value="us">United States</option>
-          <option value="gb">United Kingdom</option>
-          <option value="in">India</option>
-          <option value="ca">Canada</option>
-          <option value="au">Australia</option>
-        </select>
         <div className="flex gap-2">
           <select
             className="input flex-1"
-            value={filters.language}
-            onChange={(e) => setFilters((f) => ({ ...f, language: e.target.value }))}
+            value={filters.careerField}
+            onChange={(e) => setFilters((f) => ({ ...f, careerField: e.target.value }))}
           >
-            <option value="">All languages</option>
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
+            <option value="all">All Career Fields</option>
+            <option value="technology">Technology</option>
+            <option value="management">Management</option>
+            <option value="healthcare">Healthcare</option>
+            <option value="finance">Finance</option>
+            <option value="education">Education</option>
+            <option value="engineering">Engineering</option>
+            <option value="marketing">Marketing</option>
+            <option value="design">Design</option>
+            <option value="legal">Legal</option>
+            <option value="hospitality">Hospitality</option>
+            <option value="retail">Retail</option>
+            <option value="manufacturing">Manufacturing</option>
           </select>
           <button
             className="btn"

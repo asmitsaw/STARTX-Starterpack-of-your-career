@@ -95,6 +95,53 @@ CREATE TABLE IF NOT EXISTS connections (
   PRIMARY KEY (user_id, connection_id)
 );
 
+-- User Profiles
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT,
+  location TEXT,
+  about TEXT,
+  banner_url TEXT,
+  highlights JSONB,
+  connections_count INT DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- User Experiences
+CREATE TABLE IF NOT EXISTS user_experiences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  company TEXT NOT NULL,
+  role TEXT NOT NULL,
+  period TEXT,
+  summary TEXT,
+  skills JSONB,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- User Education
+CREATE TABLE IF NOT EXISTS user_education (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  school TEXT NOT NULL,
+  degree TEXT NOT NULL,
+  period TEXT,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- User Skills
+CREATE TABLE IF NOT EXISTS user_skills (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  skill TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, skill)
+);
+
 -- Trending topics
 CREATE TABLE IF NOT EXISTS trending_topics (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

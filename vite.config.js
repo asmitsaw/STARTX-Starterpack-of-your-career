@@ -13,6 +13,11 @@ export default defineConfig({
     proxy: {
       '/api': process.env.VITE_API_BASE || 'http://localhost:5174'
     }
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
   }
 })
 

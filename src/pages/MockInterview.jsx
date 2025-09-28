@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useLocation, Navigate } from 'react-router-dom'
 import SegmentedTabs from '../components/SegmentedTabs.jsx'
-import { useAuth } from '../App.jsx'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 export default function MockInterview() {
   // Redirect to the new dashboard page

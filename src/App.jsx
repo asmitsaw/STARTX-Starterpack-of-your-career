@@ -1,5 +1,5 @@
-import React, { useState, createContext, useContext, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Header from './components/Header.jsx'
 import PublicHeader from './components/PublicHeader.jsx'
 import { ScrollProgress } from '@/registry/magicui/scroll-progress'
@@ -23,44 +23,7 @@ import Profile from './pages/Profile.jsx'
 import { useAuth as useClerkAuth, SignedIn, SignedOut } from '@clerk/clerk-react'
 import Learning from './pages/Learning.jsx'
 import Message from './pages/Message.jsx'
-
-// Create Auth Context
-const AuthContext = createContext()
-
-// Auth Provider Component
-function AuthProvider({ children }) {
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const [authMode, setAuthMode] = useState('signin')
-
-  const openAuthModal = (mode = 'signin') => {
-    setAuthMode(mode)
-    setShowAuthModal(true)
-  }
-
-  const closeAuthModal = () => {
-    setShowAuthModal(false)
-  }
-
-  return (
-    <AuthContext.Provider value={{
-      showAuthModal,
-      authMode,
-      openAuthModal,
-      closeAuthModal
-    }}>
-      {children}
-    </AuthContext.Provider>
-  )
-}
-
-// Hook to use auth context
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+import { AuthProvider, useAuth } from './contexts/AuthContext.jsx'
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -85,7 +48,7 @@ function ProtectedRoute({ children }) {
 // Main App Component
 function AppContent() {
   const { showAuthModal, authMode, openAuthModal, closeAuthModal } = useAuth()
-  const { isSignedIn } = useClerkAuth()
+  const { isSignedIn, user } = useClerkAuth()
 
   useEffect(() => {
     // Auto-close auth modal once Clerk reports signed-in
@@ -98,12 +61,26 @@ function AppContent() {
   useEffect(() => {
     const ensure = async () => {
       try {
-        const res = await fetch('http://localhost:5174/api/ensure-user', { method: 'POST', credentials: 'include' })
+        if (!user) return
+        
+        const res = await fetch('http://localhost:5174/api/ensure-user', { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            clerkUserId: user.id,
+            clerkEmail: user.emailAddresses?.[0]?.emailAddress,
+            clerkName: user.fullName || user.firstName,
+            clerkImageUrl: user.imageUrl
+          })
+        })
         // ignore body
       } catch {}
     }
-    if (isSignedIn && !showAuthModal) ensure()
-  }, [isSignedIn, showAuthModal])
+    if (isSignedIn && !showAuthModal && user) ensure()
+  }, [isSignedIn, showAuthModal, user])
 
   return (
     <BrowserRouter>
@@ -155,5 +132,6 @@ export default function App() {
     </AuthProvider>
   )
 }
+
 
 

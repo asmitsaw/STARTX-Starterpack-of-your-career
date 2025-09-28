@@ -56,6 +56,43 @@ router.post('/login', async (req, res, next) => {
   } catch (e) { next(e) }
 })
 
+// Ensure user exists in database (for Clerk authentication)
+router.post('/ensure-user', async (req, res, next) => {
+  try {
+    // Get Clerk user data from request body
+    const { clerkUserId, clerkEmail, clerkName, clerkImageUrl } = req.body
+    
+    if (!clerkUserId) {
+      return res.status(400).json({ error: 'missing_clerk_user_id' })
+    }
+
+    // Check if user already exists by clerk_id or email
+    const { rows: existing } = await query(
+      'SELECT id, name, email, headline, avatar_url FROM users WHERE clerk_id = $1 OR email = $2', 
+      [clerkUserId, clerkEmail]
+    )
+
+    if (existing.length > 0) {
+      // User exists, update clerk_id if missing and return their data
+      if (!existing[0].clerk_id) {
+        await query('UPDATE users SET clerk_id = $1 WHERE id = $2', [clerkUserId, existing[0].id])
+      }
+      return res.json({ user: existing[0] })
+    }
+
+    // User doesn't exist, create them
+    const { rows: newUser } = await query(
+      'INSERT INTO users (clerk_id, name, email, headline, avatar_url) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, headline, avatar_url, created_at',
+      [clerkUserId, clerkName || null, clerkEmail || null, null, clerkImageUrl || null]
+    )
+
+    res.status(201).json({ user: newUser[0] })
+  } catch (e) { 
+    console.error('Ensure user error:', e)
+    next(e) 
+  }
+})
+
 export default router
 
 

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, Zap, Users } from "lucide-react";
+import { useAuth } from "../contexts/AuthContext.jsx";
 
 const DotGrid = () => {
   return (
@@ -17,6 +18,7 @@ const DotGrid = () => {
 
 export default function HeroSection() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const { openAuthModal } = useAuth();
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -164,6 +166,7 @@ export default function HeroSection() {
             transition={{ duration: 0.3 }}
           >
             <button 
+              onClick={() => openAuthModal('signup')}
               className="btn-primary px-8 py-6 text-lg font-medium rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 group bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400"
             >
               Get Started Free

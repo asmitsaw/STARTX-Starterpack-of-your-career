@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import SegmentedTabs from '../components/SegmentedTabs.jsx'
-import { useAuth } from '../App.jsx'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 const courses = [
   {

@@ -17,4 +17,7 @@ export async function query(text, params) {
   }
 }
 
+// Default export for easier importing
+export default { query, pool }
+
 
