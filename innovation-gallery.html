@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STARTX - Innovation Pitch Gallery</title>
+    <meta name="description" content="Explore or present bold new ideas in an interactive showcase section with eye-catching cards and pitch highlights.">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">STARTX</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="modern-homepage.html">Home</a></li>
+                <li><a href="news-feed.html">News Feed</a></li>
+                <li><a href="#innovation-gallery" class="active">Innovation</a></li>
+                <li><a href="ai-interview.html">AI Interview</a></li>
+                <li><a href="profile-excellence.html">Profile</a></li>
+            </ul>
+            <div class="nav-buttons">
+                <button class="btn-secondary">Sign In</button>
+                <button class="btn-primary">Get Started</button>
+            </div>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Innovation Pitch Gallery -->
+    <section id="innovation-gallery" class="innovation-gallery">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Innovation Pitch Gallery</h2>
+                <p class="section-subtitle">Explore or present bold new ideas in an interactive showcase section with eye-catching cards and pitch highlights</p>
+            </div>
+            
+            <!-- Gallery Filters -->
+            <div class="gallery-filters">
+                <button class="filter-btn active" data-filter="all">All Innovations</button>
+                <button class="filter-btn" data-filter="tech">Technology</button>
+                <button class="filter-btn" data-filter="health">Healthcare</button>
+                <button class="filter-btn" data-filter="finance">Finance</button>
+                <button class="filter-btn" data-filter="education">Education</button>
+                <button class="filter-btn" data-filter="sustainability">Sustainability</button>
+            </div>
+            
+            <div class="pitch-grid">
+                <div class="pitch-card" data-category="tech">
+                    <div class="pitch-image">
+                        <img src="https://images.unsplash.com/photo-1518709268805-4e9042af2176?w=400&h=300&fit=crop" alt="AI Platform">
+                        <div class="pitch-overlay">
+                            <button class="btn-primary btn-small">View Pitch</button>
+                        </div>
+                    </div>
+                    <div class="pitch-content">
+                        <div class="pitch-meta">
+                            <span class="pitch-category">Technology</span>
+                            <div class="pitch-rating">
+                                <i class="fas fa-star"></i>
+                                <span>4.8</span>
+                            </div>
+                        </div>
+                        <h3>AI-Powered Learning Platform</h3>
+                        <p>Revolutionary adaptive learning system that personalizes education for every student using advanced machine learning algorithms.</p>
+                        <div class="pitch-stats">
+                            <div class="stat">
+                                <span class="stat-number">$2.5M</span>
+                                <span class="stat-label">Funding</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">50K+</span>
+                                <span class="stat-label">Users</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pitch-card" data-category="health">
+                    <div class="pitch-image">
+                        <img src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=300&fit=crop" alt="Health Tech">
+                        <div class="pitch-overlay">
+                            <button class="btn-primary btn-small">View Pitch</button>
+                        </div>
+                    </div>
+                    <div class="pitch-content">
+                        <div class="pitch-meta">
+                            <span class="pitch-category">Healthcare</span>
+                            <div class="pitch-rating">
+                                <i class="fas fa-star"></i>
+                                <span>4.9</span>
+                            </div>
+                        </div>
+                        <h3>Smart Health Monitoring</h3>
+                        <p>IoT-based health monitoring system for proactive healthcare management with real-time alerts and predictive analytics.</p>
+                        <div class="pitch-stats">
+                            <div class="stat">
+                                <span class="stat-number">$1.8M</span>
+                                <span class="stat-label">Funding</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">25K+</span>
+                                <span class="stat-label">Users</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pitch-card" data-category="finance">
+                    <div class="pitch-image">
+                        <img src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=300&fit=crop" alt="FinTech">
+                        <div class="pitch-overlay">
+                            <button class="btn-primary btn-small">View Pitch</button>
+                        </div>
+                    </div>
+                    <div class="pitch-content">
+                        <div class="pitch-meta">
+                            <span class="pitch-category">Finance</span>
+                            <div class="pitch-rating">
+                                <i class="fas fa-star"></i>
+                                <span>4.7</span>
+                            </div>
+                        </div>
+                        <h3>Decentralized Finance Platform</h3>
+                        <p>Next-generation DeFi platform making financial services accessible to everyone through blockchain technology.</p>
+                        <div class="pitch-stats">
+                            <div class="stat">
+                                <span class="stat-number">$5.2M</span>
+                                <span class="stat-label">Funding</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">100K+</span>
+                                <span class="stat-label">Users</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pitch-card" data-category="education">
+                    <div class="pitch-image">
+                        <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=300&fit=crop" alt="EdTech">
+                        <div class="pitch-overlay">
+                            <button class="btn-primary btn-small">View Pitch</button>
+                        </div>
+                    </div>
+                    <div class="pitch-content">
+                        <div class="pitch-meta">
+                            <span class="pitch-category">Education</span>
+                            <div class="pitch-rating">
+                                <i class="fas fa-star"></i>
+                                <span>4.6</span>
+                            </div>
+                        </div>
+                        <h3>Virtual Reality Learning</h3>
+                        <p>Immersive VR educational experiences for enhanced learning outcomes with interactive 3D environments.</p>
+                        <div class="pitch-stats">
+                            <div class="stat">
+                                <span class="stat-number">$3.1M</span>
+                                <span class="stat-label">Funding</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">75K+</span>
+                                <span class="stat-label">Users</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pitch-card" data-category="sustainability">
+                    <div class="pitch-image">
+                        <img src="https://images.unsplash.com/photo-1473341304170-971dccb5ac1e?w=400&h=300&fit=crop" alt="Green Tech">
+                        <div class="pitch-overlay">
+                            <button class="btn-primary btn-small">View Pitch</button>
+                        </div>
+                    </div>
+                    <div class="pitch-content">
+                        <div class="pitch-meta">
+                            <span class="pitch-category">Sustainability</span>
+                            <div class="pitch-rating">
+                                <i class="fas fa-star"></i>
+                                <span>4.9</span>
+                            </div>
+                        </div>
+                        <h3>Carbon Capture Technology</h3>
+                        <p>Revolutionary carbon capture and storage technology to combat climate change and reduce emissions.</p>
+                        <div class="pitch-stats">
+                            <div class="stat">
+                                <span class="stat-number">$8.5M</span>
+                                <span class="stat-label">Funding</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">200K+</span>
+                                <span class="stat-label">Impact</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="pitch-card" data-category="tech">
+                    <div class="pitch-image">
+                        <img src="https://images.unsplash.com/photo-1518186285589-2f7649de83e0?w=400&h=300&fit=crop" alt="Quantum Computing">
+                        <div class="pitch-overlay">
+                            <button class="btn-primary btn-small">View Pitch</button>
+                        </div>
+                    </div>
+                    <div class="pitch-content">
+                        <div class="pitch-meta">
+                            <span class="pitch-category">Technology</span>
+                            <div class="pitch-rating">
+                                <i class="fas fa-star"></i>
+                                <span>4.5</span>
+                            </div>
+                        </div>
+                        <h3>Quantum Computing Solutions</h3>
+                        <p>Breakthrough quantum computing applications for solving complex problems in cryptography and optimization.</p>
+                        <div class="pitch-stats">
+                            <div class="stat">
+                                <span class="stat-number">$12M</span>
+                                <span class="stat-label">Funding</span>
+                            </div>
+                            <div class="stat">
+                                <span class="stat-number">15K+</span>
+                                <span class="stat-label">Users</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="gallery-actions">
+                <button class="btn-outline" id="submit-pitch">Submit Your Pitch</button>
+                <button class="btn-primary" id="explore-all">Explore All</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pitch Submission Modal -->
+    <div class="modal" id="pitch-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Submit Your Innovation Pitch</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="pitch-form">
+                    <div class="form-group">
+                        <label>Innovation Title</label>
+                        <input type="text" placeholder="Enter your innovation title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <select required>
+                            <option value="">Select Category</option>
+                            <option value="tech">Technology</option>
+                            <option value="health">Healthcare</option>
+                            <option value="finance">Finance</option>
+                            <option value="education">Education</option>
+                            <option value="sustainability">Sustainability</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea placeholder="Describe your innovation in detail" rows="4" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Funding Goal</label>
+                        <input type="number" placeholder="Enter funding amount" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Upload Image</label>
+                        <input type="file" accept="image/*">
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn-outline" id="cancel-pitch">Cancel</button>
+                        <button type="submit" class="btn-primary">Submit Pitch</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Innovation Stats Section -->
+    <section class="innovation-stats">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Innovation Impact</h2>
+                <p class="section-subtitle">See how our platform is driving innovation across industries</p>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-lightbulb"></i>
+                    </div>
+                    <h3>1,250+</h3>
+                    <p>Innovations Submitted</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <h3>$45M+</h3>
+                    <p>Total Funding Raised</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>500K+</h3>
+                    <p>Active Users</p>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <h3>25+</h3>
+                    <p>Countries Reached</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>STARTX</h3>
+                    <p>Elevate your career journey—where innovation meets opportunity.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Innovation Categories</h4>
+                    <ul>
+                        <li><a href="#" data-filter="tech">Technology</a></li>
+                        <li><a href="#" data-filter="health">Healthcare</a></li>
+                        <li><a href="#" data-filter="finance">Finance</a></li>
+                        <li><a href="#" data-filter="education">Education</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="modern-homepage.html">Home</a></li>
+                        <li><a href="news-feed.html">News Feed</a></li>
+                        <li><a href="ai-interview.html">AI Interview</a></li>
+                        <li><a href="profile-excellence.html">Profile</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">Contact</a></li>
+                        <li><a href="#">Privacy</a></li>
+                        <li><a href="#">Terms</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 STARTX. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // Innovation Gallery specific functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const pitchCards = document.querySelectorAll('.pitch-card');
+            const submitPitchBtn = document.getElementById('submit-pitch');
+            const exploreAllBtn = document.getElementById('explore-all');
+            const modal = document.getElementById('pitch-modal');
+            const modalClose = document.querySelector('.modal-close');
+            const cancelPitchBtn = document.getElementById('cancel-pitch');
+            const pitchForm = document.getElementById('pitch-form');
+            
+            // Filter functionality
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    button.classList.add('active');
+                    
+                    const filter = button.getAttribute('data-filter');
+                    
+                    pitchCards.forEach(card => {
+                        const category = card.getAttribute('data-category');
+                        
+                        if (filter === 'all' || category === filter) {
+                            card.style.display = 'block';
+                            card.style.animation = 'fadeInUp 0.6s ease-out';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+            
+            // Modal functionality
+            submitPitchBtn.addEventListener('click', () => {
+                modal.style.display = 'flex';
+            });
+            
+            modalClose.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            
+            cancelPitchBtn.addEventListener('click', () => {
+                modal.style.display = 'none';
+            });
+            
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+            
+            // Form submission
+            pitchForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                showNotification('Pitch submitted successfully! We\'ll review it soon.', 'success');
+                modal.style.display = 'none';
+                pitchForm.reset();
+            });
+            
+            // Explore all functionality
+            exploreAllBtn.addEventListener('click', () => {
+                showNotification('Loading all innovations...', 'info');
+                setTimeout(() => {
+                    showNotification('All innovations loaded!', 'success');
+                }, 2000);
+            });
+            
+            // Pitch card click handlers
+            pitchCards.forEach(card => {
+                const viewPitchBtn = card.querySelector('.pitch-overlay button');
+                viewPitchBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const title = card.querySelector('h3').textContent;
+                    showNotification(`Opening pitch: ${title}`, 'info');
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

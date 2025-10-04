@@ -1,11 +1,11 @@
 import express from 'express'
 import { query } from '../db.js'
-import { requireAuth } from '../middleware/auth.js'
+import { clerkAuth } from '../middleware/clerkAuth.js'
 
 const router = express.Router()
 
 // List conversations for current user with last message preview
-router.get('/conversations', requireAuth, async (req, res, next) => {
+router.get('/conversations', clerkAuth, async (req, res, next) => {
   try {
     const userId = req.user.id
     const { rows } = await query(
@@ -36,7 +36,7 @@ router.get('/conversations', requireAuth, async (req, res, next) => {
 })
 
 // Create (or get existing) 1:1 conversation with another user
-router.post('/conversations', requireAuth, async (req, res, next) => {
+router.post('/conversations', clerkAuth, async (req, res, next) => {
   const clientUserId = req.user.id
   const { participantId } = req.body || {}
   if (!participantId) return res.status(400).json({ error: 'participant_required' })
@@ -66,7 +66,7 @@ router.post('/conversations', requireAuth, async (req, res, next) => {
 })
 
 // Get messages in a conversation
-router.get('/conversations/:id/messages', requireAuth, async (req, res, next) => {
+router.get('/conversations/:id/messages', clerkAuth, async (req, res, next) => {
   try {
     const { id } = req.params
     const userId = req.user.id
@@ -89,7 +89,7 @@ router.get('/conversations/:id/messages', requireAuth, async (req, res, next) =>
 })
 
 // Send a message
-router.post('/conversations/:id/messages', requireAuth, async (req, res, next) => {
+router.post('/conversations/:id/messages', clerkAuth, async (req, res, next) => {
   try {
     const { id } = req.params
     const userId = req.user.id
@@ -115,7 +115,7 @@ router.post('/conversations/:id/messages', requireAuth, async (req, res, next) =
 })
 
 // Join a conversation room via HTTP (client should also join over socket side)
-router.post('/conversations/:id/join', requireAuth, (req, res) => {
+router.post('/conversations/:id/join', clerkAuth, (req, res) => {
   res.json({ ok: true })
 })
 

@@ -31,7 +31,7 @@ const InterviewDashboard = () => {
         <h1 className="text-2xl font-bold text-slate-900">Interview Dashboard</h1>
         <p className="text-slate-600">AI-powered interview management and analytics</p>
         <Link 
-          to="/mock" 
+          to="/new-interview" 
           className="btn-primary flex items-center gap-2"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -164,7 +164,7 @@ const InterviewDashboard = () => {
           <div className="mt-6">
             <h4 className="text-sm font-medium mb-3">Quick Actions</h4>
             <div className="space-y-2">
-              <Link to="/mock" className="flex items-center p-2 rounded-lg hover:bg-slate-50">
+              <Link to="/new-interview" className="flex items-center p-2 rounded-lg hover:bg-slate-50">
                 <svg className="h-5 w-5 text-slate-500 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
                 </svg>

@@ -1,6 +1,7 @@
 import express from 'express'
 import { query } from '../db.js'
 import { requireAuth } from '../middleware/auth.js'
+import { clerkAuth } from '../middleware/clerkAuth.js'
 import multer from 'multer'
 import path from 'path'
 import fs from 'fs'
@@ -22,24 +23,97 @@ const upload = multer({ storage })
 export default function postRoutes(io){
 const router = express.Router()
 
-router.post('/', requireAuth, upload.single('media'), async (req, res, next) => {
+router.post('/', clerkAuth, upload.single('media'), async (req, res, next) => {
   try {
-    const { content, media_type } = req.body
+    const { content, media_type, media_metadata } = req.body
     if (!content) return res.status(400).json({ error: 'content_required' })
+    
+    // User is already created/synced by clerkAuth middleware
+    // No need to check again
+    
+    // Check connection status for visibility rules
+    const connectionCheck = await query(`
+      SELECT status FROM connections 
+      WHERE (user_id = $1 OR connected_user_id = $1)
+      AND status = 'accepted'
+    `, [req.user.id])
+    
     const base = req.app.get('PUBLIC_API_BASE') || ''
-    const media_url = req.file ? `${base}/uploads/${req.file.filename}` : null
+    let media_url = req.file ? `${base}/uploads/${req.file.filename}` : null
+    let media_urls = null
+    
+    // If media_metadata is provided (from ImageKit), use that instead of local upload
+    if (media_metadata) {
+      try {
+        const metadata = JSON.parse(media_metadata)
+        media_url = metadata.url
+        media_urls = JSON.stringify({
+          small: metadata.small || metadata.url,
+          medium: metadata.medium || metadata.url,
+          large: metadata.large || metadata.url,
+          original: metadata.url
+        })
+      } catch (err) {
+        console.error('Failed to parse media metadata:', err)
+      }
+    }
+    
+    // Insert post with enhanced media information and encryption flag
     const { rows } = await query(
-      'INSERT INTO posts (author_id, content, media_url, media_type) VALUES ($1,$2,$3,$4) RETURNING *',
-      [req.user.id, content, media_url, media_type || null]
+      `INSERT INTO posts 
+       (author_id, content, media_url, media_type, media_urls, visibility, is_encrypted) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       RETURNING *`,
+      [
+        req.user.id, 
+        content, 
+        media_url, 
+        media_type || null, 
+        media_urls, 
+        'connections', // Changed from public to connections for better privacy
+        true // Enable encryption for content
+      ]
     )
+    
     const created = rows[0]
+    
+    // Add connection information to the response
+    created.connections = connectionCheck.rows.map(c => c.status)
+    
     res.status(201).json(created)
-    // broadcast new post to feed listeners
-    io.emit('post:created', { post: created, originClientId: req.headers['x-client-id'] || null })
+    
+    // Get all users who are connected with the post creator
+    const { rows: connectedUsers } = await query(
+      `SELECT 
+        CASE 
+          WHEN user_id = $1 THEN connected_user_id 
+          WHEN connected_user_id = $1 THEN user_id 
+        END AS connected_id
+      FROM connections 
+      WHERE (user_id = $1 OR connected_user_id = $1) 
+      AND status = 'accepted'`,
+      [req.user.id]
+    );
+    
+    // Emit to the post creator
+    io.to(`user:${req.user.id}`).emit('post:created', { 
+      post: created, 
+      originClientId: req.headers['x-client-id'] || null,
+      hasMedia: !!media_url
+    });
+    
+    // Emit to all connected users
+    connectedUsers.forEach(connection => {
+      io.to(`user:${connection.connected_id}`).emit('post:created', { 
+        post: created, 
+        originClientId: req.headers['x-client-id'] || null,
+        hasMedia: !!media_url
+      });
+    });
   } catch (e) { next(e) }
 })
 
-router.get('/feed', requireAuth, async (req, res, next) => {
+router.get('/feed', clerkAuth, async (req, res, next) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || '10', 10), 50)
     const cursor = req.query.cursor || null
@@ -50,12 +124,12 @@ router.get('/feed', requireAuth, async (req, res, next) => {
       cursorClause = 'AND p.created_at < $3::timestamptz'
     }
     const sql = `
-      SELECT p.*, u.name, u.headline
+      SELECT p.*, u.name, u.headline, u.avatar_url, u.id as user_id
       FROM posts p
       JOIN users u ON u.id = p.author_id
       WHERE (
         p.author_id = $1 OR p.author_id IN (
-          SELECT connection_id FROM connections WHERE user_id=$1 AND status='accepted'
+          SELECT connected_user_id FROM connections WHERE user_id=$1 AND status='accepted'
         )
       )
       ${cursorClause}
@@ -63,11 +137,23 @@ router.get('/feed', requireAuth, async (req, res, next) => {
       LIMIT $2
     `
     const { rows } = await query(sql, params)
-    res.json({ items: rows, nextCursor: rows.length ? rows[rows.length - 1].created_at : null })
+    
+    // Decrypt content if encrypted
+    const posts = rows.map(post => {
+      if (post.is_encrypted && post.content) {
+        return {
+          ...post,
+          content: req.security.decrypt(post.content)
+        }
+      }
+      return post
+    })
+    
+    res.json({ items: posts, nextCursor: posts.length ? posts[posts.length - 1].created_at : null })
   } catch (e) { next(e) }
 })
 
-router.put('/:id/like', requireAuth, async (req, res, next) => {
+router.put('/:id/like', clerkAuth, async (req, res, next) => {
   try {
     const { id } = req.params
     const client = await (await import('../db.js')).pool.connect()
@@ -98,7 +184,7 @@ router.put('/:id/like', requireAuth, async (req, res, next) => {
   } catch (e) { next(e) }
 })
 
-router.post('/:id/comment', requireAuth, async (req, res, next) => {
+router.post('/:id/comment', clerkAuth, async (req, res, next) => {
   try {
     const { id } = req.params
     const { text } = req.body
@@ -124,7 +210,7 @@ router.post('/:id/comment', requireAuth, async (req, res, next) => {
   } catch (e) { next(e) }
 })
 
-router.put('/:id/share', requireAuth, async (req, res, next) => {
+router.put('/:id/share', clerkAuth, async (req, res, next) => {
   try {
     const { id } = req.params
     await query('UPDATE posts SET shares_count = shares_count+1 WHERE id=$1', [id])
@@ -134,7 +220,7 @@ router.put('/:id/share', requireAuth, async (req, res, next) => {
 })
 
 // Fetch comments for a post
-router.get('/:id/comments', requireAuth, async (req, res, next) => {
+router.get('/:id/comments', clerkAuth, async (req, res, next) => {
   try {
     const { id } = req.params
     const { rows } = await query(

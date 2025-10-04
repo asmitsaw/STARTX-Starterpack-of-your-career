@@ -1,5 +1,5 @@
-import React, { useState, createContext, useContext, useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import React, { useState, useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import Header from './components/Header.jsx'
 import PublicHeader from './components/PublicHeader.jsx'
 import { ScrollProgress } from '@/registry/magicui/scroll-progress'
@@ -23,44 +23,9 @@ import Profile from './pages/Profile.jsx'
 import { useAuth as useClerkAuth, SignedIn, SignedOut } from '@clerk/clerk-react'
 import Learning from './pages/Learning.jsx'
 import Message from './pages/Message.jsx'
-
-// Create Auth Context
-const AuthContext = createContext()
-
-// Auth Provider Component
-function AuthProvider({ children }) {
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const [authMode, setAuthMode] = useState('signin')
-
-  const openAuthModal = (mode = 'signin') => {
-    setAuthMode(mode)
-    setShowAuthModal(true)
-  }
-
-  const closeAuthModal = () => {
-    setShowAuthModal(false)
-  }
-
-  return (
-    <AuthContext.Provider value={{
-      showAuthModal,
-      authMode,
-      openAuthModal,
-      closeAuthModal
-    }}>
-      {children}
-    </AuthContext.Provider>
-  )
-}
-
-// Hook to use auth context
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+import { AuthProvider, useAuth } from './contexts/AuthContext.jsx'
+import { ThemeProvider } from './contexts/ThemeContext.jsx'
+import ClickSpark from './components/ClickSpark.jsx'
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -85,7 +50,7 @@ function ProtectedRoute({ children }) {
 // Main App Component
 function AppContent() {
   const { showAuthModal, authMode, openAuthModal, closeAuthModal } = useAuth()
-  const { isSignedIn } = useClerkAuth()
+  const { isSignedIn, user } = useClerkAuth()
 
   useEffect(() => {
     // Auto-close auth modal once Clerk reports signed-in
@@ -98,51 +63,67 @@ function AppContent() {
   useEffect(() => {
     const ensure = async () => {
       try {
-        const res = await fetch('http://localhost:5174/api/ensure-user', { method: 'POST', credentials: 'include' })
+        if (!user) return
+        
+        const res = await fetch('http://localhost:5174/api/ensure-user', { 
+          method: 'POST', 
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            clerkUserId: user.id,
+            clerkEmail: user.emailAddresses?.[0]?.emailAddress,
+            clerkName: user.fullName || user.firstName,
+            clerkImageUrl: user.imageUrl
+          })
+        })
         // ignore body
       } catch {}
     }
-    if (isSignedIn && !showAuthModal) ensure()
-  }, [isSignedIn, showAuthModal])
+    if (isSignedIn && !showAuthModal && user) ensure()
+  }, [isSignedIn, showAuthModal, user])
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen no-shift dark bg-dark-950 text-white">
-        <SignedIn>
-          <Header />
-        </SignedIn>
-        <SignedOut>
-          <PublicHeader />
-        </SignedOut>
-        <ScrollProgress className="top-[65px]" />
-        <main>
-          <Routes>
-            <Route path="/" element={isSignedIn ? <Home /> : <Landing />} />
-            <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
-            <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
-            <Route path="/mock" element={<ProtectedRoute><MockInterview /></ProtectedRoute>} />
-            <Route path="/interview-session" element={<ProtectedRoute><InterviewSession /></ProtectedRoute>} />
-            <Route path="/interview-dashboard" element={<ProtectedRoute><InterviewDashboard /></ProtectedRoute>} />
-            <Route path="/interview-analytics" element={<ProtectedRoute><InterviewAnalytics /></ProtectedRoute>} />
-            <Route path="/new-interview" element={<ProtectedRoute><NewInterview /></ProtectedRoute>} />
-            <Route path="/interview-history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
-            <Route path="/pitch" element={<ProtectedRoute><Pitch /></ProtectedRoute>} />
-            <Route path="/activity" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
-            <Route path="/resume" element={<ProtectedRoute><Resume /></ProtectedRoute>} />
-            <Route path="/premium" element={<ProtectedRoute><Package /></ProtectedRoute>} />
-            <Route path="/learning" element={<ProtectedRoute><Learning /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-            <Route path="/message" element={<ProtectedRoute><Message /></ProtectedRoute>} />
-          </Routes>
-        </main>
-        <Footer />
-        
-        <AuthModal 
-          isOpen={showAuthModal} 
-          onClose={closeAuthModal}
-          mode={authMode}
-        />
-      </div>
+      <ClickSpark>
+        <div className="min-h-screen no-shift bg-white text-gray-900 dark:bg-dark-950 dark:text-white">
+          <SignedIn>
+            <Header />
+          </SignedIn>
+          <SignedOut>
+            <PublicHeader />
+          </SignedOut>
+          <ScrollProgress className="top-[65px]" />
+          <main>
+            <Routes>
+              <Route path="/" element={isSignedIn ? <Home /> : <Landing />} />
+              <Route path="/feed" element={<ProtectedRoute><Feed /></ProtectedRoute>} />
+              <Route path="/news" element={<ProtectedRoute><News /></ProtectedRoute>} />
+              <Route path="/mock" element={<ProtectedRoute><MockInterview /></ProtectedRoute>} />
+              <Route path="/interview-session" element={<ProtectedRoute><InterviewSession /></ProtectedRoute>} />
+              <Route path="/interview-dashboard" element={<ProtectedRoute><InterviewDashboard /></ProtectedRoute>} />
+              <Route path="/interview-analytics" element={<ProtectedRoute><InterviewAnalytics /></ProtectedRoute>} />
+              <Route path="/new-interview" element={<ProtectedRoute><NewInterview /></ProtectedRoute>} />
+              <Route path="/interview-history" element={<ProtectedRoute><InterviewHistory /></ProtectedRoute>} />
+              <Route path="/pitch" element={<ProtectedRoute><Pitch /></ProtectedRoute>} />
+              <Route path="/activity" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
+              <Route path="/resume" element={<ProtectedRoute><Resume /></ProtectedRoute>} />
+              <Route path="/premium" element={<ProtectedRoute><Package /></ProtectedRoute>} />
+              <Route path="/learning" element={<ProtectedRoute><Learning /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/message" element={<ProtectedRoute><Message /></ProtectedRoute>} />
+            </Routes>
+          </main>
+          <Footer />
+          
+          <AuthModal 
+            isOpen={showAuthModal} 
+            onClose={closeAuthModal}
+            mode={authMode}
+          />
+        </div>
+      </ClickSpark>
     </BrowserRouter>
   )
 }
@@ -150,10 +131,13 @@ function AppContent() {
 // Main App with Auth Provider
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
+
 
 

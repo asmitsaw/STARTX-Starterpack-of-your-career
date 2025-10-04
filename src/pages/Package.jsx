@@ -1,5 +1,5 @@
 import React from 'react'
-import { useAuth } from '../App.jsx'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 export default function Package() {
   const { openAuthModal } = useAuth()

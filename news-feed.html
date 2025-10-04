@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STARTX - Personalized News Feed</title>
+    <meta name="description" content="Stay ahead with smartly organized industry updates—delivered on a visually engaging timeline.">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">STARTX</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="modern-homepage.html">Home</a></li>
+                <li><a href="#news-feed" class="active">News Feed</a></li>
+                <li><a href="innovation-gallery.html">Innovation</a></li>
+                <li><a href="ai-interview.html">AI Interview</a></li>
+                <li><a href="profile-excellence.html">Profile</a></li>
+            </ul>
+            <div class="nav-buttons">
+                <button class="btn-secondary">Sign In</button>
+                <button class="btn-primary">Get Started</button>
+            </div>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- News Feed Section -->
+    <section id="news-feed" class="news-feed">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Personalized News Feed</h2>
+                <p class="section-subtitle">Stay ahead with smartly organized industry updates—delivered on a visually engaging timeline</p>
+            </div>
+            
+            <!-- News Filters -->
+            <div class="news-filters">
+                <button class="filter-btn active" data-filter="all">All News</button>
+                <button class="filter-btn" data-filter="tech">Technology</button>
+                <button class="filter-btn" data-filter="career">Career Tips</button>
+                <button class="filter-btn" data-filter="startup">Startups</button>
+                <button class="filter-btn" data-filter="industry">Industry</button>
+            </div>
+            
+            <div class="news-timeline">
+                <div class="news-card featured" data-category="tech">
+                    <div class="news-badge">Featured</div>
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-category">Technology</span>
+                            <span class="news-time">2 hours ago</span>
+                        </div>
+                        <h3>AI Revolution in Job Market: What You Need to Know</h3>
+                        <p>Discover how artificial intelligence is transforming recruitment and what it means for your career strategy. From automated screening to personalized learning paths, AI is reshaping how we approach professional development.</p>
+                        <div class="news-tags">
+                            <span class="tag">AI</span>
+                            <span class="tag">Career</span>
+                            <span class="tag">Technology</span>
+                        </div>
+                    </div>
+                    <div class="news-image">
+                        <img src="https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=400&h=250&fit=crop" alt="AI Technology">
+                    </div>
+                </div>
+                
+                <div class="news-card" data-category="startup">
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-category">Startups</span>
+                            <span class="news-time">5 hours ago</span>
+                        </div>
+                        <h3>Top 10 Startup Funding Rounds This Week</h3>
+                        <p>Stay updated with the latest funding news and what it means for job opportunities in the startup ecosystem. From Series A to IPO announcements, track the companies that are reshaping industries.</p>
+                        <div class="news-tags">
+                            <span class="tag">Startups</span>
+                            <span class="tag">Funding</span>
+                            <span class="tag">Investment</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="news-card" data-category="career">
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-category">Career Tips</span>
+                            <span class="news-time">1 day ago</span>
+                        </div>
+                        <h3>Remote Work Best Practices for 2024</h3>
+                        <p>Master the art of remote work with these proven strategies for productivity and career growth. Learn how to maintain work-life balance while advancing your professional goals.</p>
+                        <div class="news-tags">
+                            <span class="tag">Remote Work</span>
+                            <span class="tag">Productivity</span>
+                            <span class="tag">Work-Life Balance</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="news-card" data-category="industry">
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-category">Industry</span>
+                            <span class="news-time">2 days ago</span>
+                        </div>
+                        <h3>Green Tech: The Future of Sustainable Careers</h3>
+                        <p>Explore opportunities in the growing green technology sector and how to position yourself for success. From renewable energy to sustainable finance, discover the skills that will be in high demand.</p>
+                        <div class="news-tags">
+                            <span class="tag">Green Tech</span>
+                            <span class="tag">Sustainability</span>
+                            <span class="tag">Renewable Energy</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="news-card" data-category="tech">
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-category">Technology</span>
+                            <span class="news-time">3 days ago</span>
+                        </div>
+                        <h3>The Rise of No-Code Development Platforms</h3>
+                        <p>How no-code and low-code platforms are democratizing software development and creating new career opportunities for non-technical professionals.</p>
+                        <div class="news-tags">
+                            <span class="tag">No-Code</span>
+                            <span class="tag">Development</span>
+                            <span class="tag">Software</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="news-card" data-category="career">
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-category">Career Tips</span>
+                            <span class="news-time">4 days ago</span>
+                        </div>
+                        <h3>Building Your Personal Brand in the Digital Age</h3>
+                        <p>Strategies for creating a compelling personal brand that opens doors to new opportunities and career advancement in today's connected world.</p>
+                        <div class="news-tags">
+                            <span class="tag">Personal Brand</span>
+                            <span class="tag">Digital Marketing</span>
+                            <span class="tag">Networking</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="news-actions">
+                <button class="btn-outline" id="load-more">Load More News</button>
+                <button class="btn-primary" id="customize-feed">Customize Feed</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- News Analytics Section -->
+    <section class="news-analytics">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Your News Insights</h2>
+                <p class="section-subtitle">Track your reading patterns and discover trending topics in your industry</p>
+            </div>
+            <div class="analytics-grid">
+                <div class="analytics-card">
+                    <div class="analytics-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Reading Trends</h3>
+                    <p>You've read 47 articles this month, with a focus on technology and career development.</p>
+                </div>
+                <div class="analytics-card">
+                    <div class="analytics-icon">
+                        <i class="fas fa-fire"></i>
+                    </div>
+                    <h3>Trending Topics</h3>
+                    <p>AI, remote work, and sustainable technology are currently trending in your network.</p>
+                </div>
+                <div class="analytics-card">
+                    <div class="analytics-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3>Network Activity</h3>
+                    <p>Your connections are actively discussing startup funding and career transitions.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>STARTX</h3>
+                    <p>Elevate your career journey—where innovation meets opportunity.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>News Categories</h4>
+                    <ul>
+                        <li><a href="#" data-filter="tech">Technology</a></li>
+                        <li><a href="#" data-filter="career">Career Tips</a></li>
+                        <li><a href="#" data-filter="startup">Startups</a></li>
+                        <li><a href="#" data-filter="industry">Industry</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="modern-homepage.html">Home</a></li>
+                        <li><a href="innovation-gallery.html">Innovation</a></li>
+                        <li><a href="ai-interview.html">AI Interview</a></li>
+                        <li><a href="profile-excellence.html">Profile</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">Contact</a></li>
+                        <li><a href="#">Privacy</a></li>
+                        <li><a href="#">Terms</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 STARTX. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // News Feed specific functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            const newsCards = document.querySelectorAll('.news-card');
+            const loadMoreBtn = document.getElementById('load-more');
+            const customizeBtn = document.getElementById('customize-feed');
+            
+            // Filter functionality
+            filterButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    // Remove active class from all buttons
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    // Add active class to clicked button
+                    button.classList.add('active');
+                    
+                    const filter = button.getAttribute('data-filter');
+                    
+                    newsCards.forEach(card => {
+                        const category = card.getAttribute('data-category');
+                        
+                        if (filter === 'all' || category === filter) {
+                            card.style.display = 'block';
+                            card.style.animation = 'fadeInUp 0.6s ease-out';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                });
+            });
+            
+            // Load more functionality
+            loadMoreBtn.addEventListener('click', () => {
+                showNotification('Loading more news...', 'info');
+                setTimeout(() => {
+                    showNotification('More news loaded successfully!', 'success');
+                }, 2000);
+            });
+            
+            // Customize feed functionality
+            customizeBtn.addEventListener('click', () => {
+                showNotification('Opening feed customization...', 'info');
+            });
+            
+            // Click handlers for news cards
+            newsCards.forEach(card => {
+                card.addEventListener('click', () => {
+                    const title = card.querySelector('h3').textContent;
+                    showNotification(`Opening: ${title}`, 'info');
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

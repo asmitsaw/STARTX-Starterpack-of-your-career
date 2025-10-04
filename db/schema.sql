@@ -90,9 +90,56 @@ CREATE TABLE IF NOT EXISTS comments (
 -- Connections
 CREATE TABLE IF NOT EXISTS connections (
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  connection_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  connected_user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   status TEXT NOT NULL CHECK (status IN ('pending','accepted')),
-  PRIMARY KEY (user_id, connection_id)
+  PRIMARY KEY (user_id, connected_user_id)
+);
+
+-- User Profiles
+CREATE TABLE IF NOT EXISTS user_profiles (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  title TEXT,
+  location TEXT,
+  about TEXT,
+  banner_url TEXT,
+  highlights JSONB,
+  connections_count INT DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- User Experiences
+CREATE TABLE IF NOT EXISTS user_experiences (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  company TEXT NOT NULL,
+  role TEXT NOT NULL,
+  period TEXT,
+  summary TEXT,
+  skills JSONB,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- User Education
+CREATE TABLE IF NOT EXISTS user_education (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  school TEXT NOT NULL,
+  degree TEXT NOT NULL,
+  period TEXT,
+  sort_order INT DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- User Skills
+CREATE TABLE IF NOT EXISTS user_skills (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  skill TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, skill)
 );
 
 -- Trending topics
@@ -172,6 +219,9 @@ CREATE TABLE IF NOT EXISTS jobs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Ensure optional logo_url exists for UI cards
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS logo_url TEXT;
+
 CREATE TABLE IF NOT EXISTS applications (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
@@ -207,4 +257,83 @@ CREATE TABLE IF NOT EXISTS messages (
 
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_conversation_members_user ON conversation_members(user_id);
+
+-- Interview and Courses additions
+
+CREATE TABLE IF NOT EXISTS interview_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID,
+  role TEXT,
+  mode TEXT,
+  experience TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Enrich interview_sessions with candidate metadata for UI
+ALTER TABLE interview_sessions
+  ADD COLUMN IF NOT EXISTS candidate_name TEXT,
+  ADD COLUMN IF NOT EXISTS candidate_email TEXT;
+
+CREATE TABLE IF NOT EXISTS transcripts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES interview_sessions(id) ON DELETE CASCADE,
+  speaker TEXT CHECK (speaker IN ('user','ai')) NOT NULL,
+  text TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS questions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT CHECK (type IN ('mcq','code','text')) NOT NULL,
+  prompt TEXT NOT NULL,
+  options TEXT[],
+  answer INT
+);
+
+CREATE TABLE IF NOT EXISTS responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID NOT NULL REFERENCES interview_sessions(id) ON DELETE CASCADE,
+  question_id UUID,
+  choice INT,
+  code TEXT,
+  text TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS courses (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  price NUMERIC(10,2) NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS chapters (
+  id TEXT PRIMARY KEY,
+  course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  youtube_id TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS enrollments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID,
+  course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  enrolled_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS progress (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  enrollment_id UUID NOT NULL REFERENCES enrollments(id) ON DELETE CASCADE,
+  chapter_id TEXT NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+  completed BOOLEAN NOT NULL DEFAULT false,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (enrollment_id, chapter_id)
+);
+
+CREATE TABLE IF NOT EXISTS certificates (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID,
+  course_id TEXT NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  file_url TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 

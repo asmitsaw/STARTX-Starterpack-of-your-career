@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { io } from 'socket.io-client'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../App.jsx'
+import { useAuth } from '../contexts/AuthContext.jsx'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5174'
 
@@ -11,17 +11,94 @@ export default function Message() {
   const [activeConversationId, setActiveConversationId] = useState(null)
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [query, setQuery] = useState('')
+  const [showNewChatModal, setShowNewChatModal] = useState(false)
+  const [showGroupModal, setShowGroupModal] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [groupName, setGroupName] = useState('')
+  const [memberName, setMemberName] = useState('')
+  const [groupMembers, setGroupMembers] = useState([])
   const socketRef = useRef(null)
   const navigate = useNavigate()
+  const endRef = useRef(null)
+
+  // Demo conversations with proper structure
+  const demoConversations = [
+    {
+      conversation_id: 1,
+      name: 'Team Alpha',
+      avatar: 'https://images.unsplash.com/photo-1522075469751-3847ae2529b0?w=40&h=40&fit=crop&crop=face',
+      last_text: 'Meeting at 10am tomorrow!',
+      unread_count: 2,
+      is_online: true,
+      last_seen: '9:15 AM',
+      is_pinned: true
+    },
+    {
+      conversation_id: 2,
+      name: 'Jane Doe',
+      avatar: 'https://images.unsplash.com/photo-1494790108755-2616b6df2a17?w=40&h=40&fit=crop&crop=face',
+      last_text: 'See you later!',
+      unread_count: 0,
+      is_online: false,
+      last_seen: '9:15 AM',
+      is_pinned: false
+    },
+    {
+      conversation_id: 3,
+      name: 'Dev Squad',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face',
+      last_text: 'Code review needed',
+      unread_count: 1,
+      is_online: false,
+      last_seen: '9:15 AM',
+      is_pinned: false
+    }
+  ]
+
+  const demoMessages = [
+    {
+      id: 1,
+      conversation_id: 1,
+      sender_id: 2,
+      sender_name: 'John',
+      text: 'Hey team!',
+      created_at: '2024-01-15T10:00:00Z'
+    },
+    {
+      id: 2,
+      conversation_id: 1,
+      sender_id: 3,
+      sender_name: 'Alice',
+      text: 'Meeting at 10am tomorrow!',
+      created_at: '2024-01-15T10:02:00Z'
+    }
+  ]
+
+  const emojis = [
+    '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
+    '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩',
+    '😘', '😗', '☺️', '😚', '😙', '🥲', '😋', '😛',
+    '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔',
+    '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄',
+    '😬', '🤥', '😔', '😪', '🤤', '😴', '😷', '🤒'
+  ]
 
   useEffect(() => {
+    // Use demo data initially, then try to load from backend
+    setConversations(demoConversations)
     if (!token) return
     fetch(`${API_BASE}/api/messages/conversations`, {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       credentials: 'include'
     })
       .then(r => r.json())
-      .then(setConversations)
+      .then(data => {
+        if (data && data.length > 0) {
+          setConversations(data)
+        }
+      })
       .catch(() => {})
   }, [token])
 
@@ -33,15 +110,30 @@ export default function Message() {
   }, [token])
 
   useEffect(() => {
-    if (!activeConversationId || !token) return
-    // Load messages
+    if (!activeConversationId) return
+    
+    // Use demo messages for conversation 1
+    if (activeConversationId === 1) {
+      setMessages(demoMessages)
+    } else {
+      setMessages([])
+    }
+
+    if (!token) return
+    
+    // Load messages from backend
     fetch(`${API_BASE}/api/messages/conversations/${activeConversationId}/messages`, {
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       credentials: 'include'
     })
       .then(r => r.json())
-      .then(setMessages)
+      .then(data => {
+        if (data && data.length > 0) {
+          setMessages(data)
+        }
+      })
       .catch(() => {})
+    
     // Join socket room
     socketRef.current?.emit('conversation:join', activeConversationId)
     const handler = (msg) => {
@@ -56,71 +148,407 @@ export default function Message() {
   const handleSend = async (e) => {
     e.preventDefault()
     if (!text.trim() || !activeConversationId) return
+    try {
+      setIsSending(true)
+      // optimistic insert
+      const optimistic = {
+        id: `local-${Date.now()}`,
+        conversation_id: activeConversationId,
+        sender_id: currentUser?.id || -1,
+        sender_name: currentUser?.name || 'You',
+        text,
+        created_at: new Date().toISOString(),
+        _optimistic: true
+      }
+      setMessages(prev => [...prev, optimistic])
+      setText('')
+      
+      if (!token) {
+        // Demo mode - just keep the optimistic message
+        setIsSending(false)
+        return
+      }
+      
     const res = await fetch(`${API_BASE}/api/messages/conversations/${activeConversationId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       credentials: 'include',
-      body: JSON.stringify({ text })
+        body: JSON.stringify({ text: optimistic.text })
     })
     const data = await res.json()
     if (res.ok) {
-      setText('')
-      setMessages(prev => [...prev, data])
+        setMessages(prev => prev.map(m => m.id === optimistic.id ? data : m))
+      } else {
+        // rollback optimistic and reinsert as error bubble
+        setMessages(prev => prev.filter(m => m.id !== optimistic.id))
+        setMessages(prev => [...prev, { ...optimistic, _error: true }])
+      }
+    } finally {
+      setIsSending(false)
+    }
+  }
+
+  // auto-scroll to latest message
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }, [messages, activeConversationId])
+
+  const handleComposerKey = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (!isSending) {
+        handleSend(e)
+      }
+    }
+  }
+
+  const filteredConversations = useMemo(() => {
+    if (!query.trim()) return conversations
+    const q = query.toLowerCase()
+    return conversations.filter(c =>
+      (c.name || '').toLowerCase().includes(q) || 
+      (c.last_text || '').toLowerCase().includes(q)
+    )
+  }, [conversations, query])
+
+  const activeConversation = conversations.find(c => c.conversation_id === activeConversationId)
+
+  const addEmoji = (emoji) => {
+    setText(prev => prev + emoji)
+    setShowEmojiPicker(false)
+  }
+
+  const addGroupMember = () => {
+    if (memberName.trim()) {
+      setGroupMembers(prev => [...prev, memberName.trim()])
+      setMemberName('')
+    }
+  }
+
+  const createGroup = () => {
+    if (groupName.trim()) {
+      // Demo: add new group conversation
+      const newGroup = {
+        conversation_id: Date.now(),
+        name: groupName,
+        avatar: 'https://images.unsplash.com/photo-1522075469751-3847ae2529b0?w=40&h=40&fit=crop&crop=face',
+        last_text: 'Group created',
+        unread_count: 0,
+        is_online: false,
+        last_seen: 'now',
+        is_pinned: false
+      }
+      setConversations(prev => [newGroup, ...prev])
+      setShowGroupModal(false)
+      setGroupName('')
+      setGroupMembers([])
     }
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-      <aside className="md:col-span-1 rounded-lg border border-white/10 bg-dark-800/60 backdrop-blur p-3">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-slate-200 font-semibold">Messages</h2>
-          <button className="btn-outline text-xs" onClick={() => navigate('/profile')}>New chat</button>
-        </div>
-        <div className="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
-          {conversations.map(c => (
+    <div className="flex h-screen bg-gray-900 text-white">
+      {/* Sidebar */}
+      <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between">
+            <h1 className="text-xl font-semibold">Messages</h1>
             <button
-              key={c.conversation_id}
-              onClick={() => setActiveConversationId(c.conversation_id)}
-              className={`w-full text-left p-3 rounded-md transition-colors ${activeConversationId===c.conversation_id ? 'bg-white/10' : 'hover:bg-white/5'}`}
+              onClick={() => setShowNewChatModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 px-3 py-1 rounded-md text-sm flex items-center gap-1"
             >
-              <div className="text-slate-100 truncate">Conversation</div>
-              <div className="text-slate-400 text-xs truncate">{c.last_text || 'No messages yet'}</div>
+              <span>+</span> New
             </button>
-          ))}
-          {!conversations.length && (
-            <div className="text-sm text-slate-400">No conversations yet</div>
-          )}
+          </div>
         </div>
-      </aside>
-      <section className="md:col-span-2 rounded-lg border border-white/10 bg-dark-800/60 backdrop-blur flex flex-col h-[78vh]">
-        <div className="border-b border-white/10 p-3">
-          <h3 className="text-slate-200 font-medium">{activeConversationId ? 'Chat' : 'Select a conversation'}</h3>
+
+        {/* Search */}
+        <div className="p-4">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
+            <input
+              type="text"
+              placeholder="Search conversations..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="w-full bg-gray-700 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-4 space-y-3" id="messages-scroll">
-          {messages.map(m => (
-            <div key={m.id} className={`max-w-[80%] ${m.sender_id===currentUser?.id ? 'ml-auto text-right' : ''}`}>
-              <div className={`inline-block px-3 py-2 rounded-xl ${m.sender_id===currentUser?.id ? 'bg-startx-500 text-white' : 'bg-white/10 text-slate-100'}`}>
-                {m.text}
+
+        {/* Conversations List */}
+        <div className="flex-1 overflow-y-auto">
+          {filteredConversations.map(conv => (
+            <div
+              key={conv.conversation_id}
+              onClick={() => setActiveConversationId(conv.conversation_id)}
+              className={`flex items-center p-3 hover:bg-gray-700 cursor-pointer border-l-4 ${
+                activeConversationId === conv.conversation_id 
+                  ? 'bg-gray-700 border-blue-500' 
+                  : 'border-transparent'
+              }`}
+            >
+              <div className="relative">
+                <img 
+                  src={conv.avatar} 
+                  alt={conv.name} 
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+                {conv.is_online && (
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-gray-800"></div>
+                )}
+                {conv.is_pinned && (
+                  <div className="absolute -top-1 -left-1 text-yellow-400">📌</div>
+                )}
               </div>
-              <div className="text-[10px] text-slate-400 mt-1">{new Date(m.created_at).toLocaleTimeString()}</div>
+              <div className="ml-3 flex-1 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-white truncate">{conv.name}</h3>
+                  <span className="text-xs text-gray-400">{conv.last_seen}</span>
+                </div>
+                <p className="text-sm text-gray-400 truncate">{conv.last_text}</p>
+              </div>
+              {conv.unread_count > 0 && (
+                <div className="bg-blue-600 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center ml-2">
+                  {conv.unread_count}
+                </div>
+              )}
             </div>
           ))}
-          {!messages.length && activeConversationId && (
-            <div className="text-sm text-slate-400">Say hi 👋</div>
+          {!conversations.length && (
+            <div className="p-4 text-center text-gray-400">No conversations yet</div>
           )}
         </div>
-        <form onSubmit={handleSend} className="p-3 border-t border-white/10 flex gap-2">
-          <input
-            className="flex-1 bg-dark-700 rounded-md px-3 py-2 text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-startx-500"
-            placeholder="Type a message..."
+      </div>
+
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {activeConversation ? (
+          <>
+            {/* Chat Header */}
+            <div className="p-4 border-b border-gray-700 flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="relative">
+                  <img 
+                    src={activeConversation.avatar} 
+                    alt={activeConversation.name} 
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  {activeConversation.is_online && (
+                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-gray-900"></div>
+          )}
+        </div>
+                <div className="ml-3">
+                  <h2 className="font-semibold">{activeConversation.name}</h2>
+                  <p className="text-sm text-gray-400">
+                    {activeConversation.is_online ? 'online' : `last seen ${activeConversation.last_seen}`}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button className="p-2 hover:bg-gray-700 rounded">📅</button>
+                <button className="p-2 hover:bg-gray-700 rounded">⚡</button>
+              </div>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {messages.map(msg => (
+                <div key={msg.id} className={`flex ${msg.sender_id === currentUser?.id ? 'justify-end' : 'justify-start'}`}>
+                  {msg.sender_id !== currentUser?.id && (
+                    <div className="mr-2">
+                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">
+                        {msg.sender_name?.[0] || 'U'}
+                      </div>
+                    </div>
+                  )}
+                  <div className={`max-w-xs lg:max-w-md ${msg.sender_id === currentUser?.id ? 'ml-auto' : ''}`}>
+                    {msg.sender_id !== currentUser?.id && (
+                      <div className="text-sm text-blue-400 mb-1">{msg.sender_name}</div>
+                    )}
+                    <div className={`rounded-2xl px-4 py-2 ${
+                      msg.sender_id === currentUser?.id 
+                        ? 'bg-blue-600 text-white' 
+                        : 'bg-gray-700 text-white'
+                    } ${msg._error ? 'ring-2 ring-red-400' : ''}`}>
+                      {msg.text}
+                    </div>
+                    <div className="text-xs text-gray-400 mt-1">
+                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+        </div>
+              </div>
+            </div>
+          ))}
+              {!messages.length && (
+                <div className="text-center text-gray-400 mt-8">
+                  Say hi to start the conversation! 👋
+                </div>
+              )}
+              <div ref={endRef} />
+            </div>
+
+            {/* Composer */}
+            <div className="p-4 border-t border-gray-700">
+              <form onSubmit={handleSend} className="flex items-end gap-2">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="p-2 text-gray-400 hover:text-white"
+                  >
+                    😊
+                  </button>
+                  {showEmojiPicker && (
+                    <div className="absolute bottom-12 left-0 bg-gray-800 border border-gray-600 rounded-lg p-3 shadow-lg w-80 max-h-40 overflow-y-auto">
+                      <div className="text-sm text-gray-300 mb-2">Smileys</div>
+                      <div className="grid grid-cols-8 gap-1">
+                        {emojis.map((emoji, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => addEmoji(emoji)}
+                            className="p-1 hover:bg-gray-700 rounded"
+                          >
+                            {emoji}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+          )}
+        </div>
+                <button type="button" className="p-2 text-gray-400 hover:text-white">📎</button>
+                <div className="flex-1">
+                  <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-          />
-          <button className="btn-primary" type="submit">Send</button>
+                    onKeyDown={handleComposerKey}
+                    placeholder="Type a message..."
+                    className="w-full bg-gray-700 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                    rows={1}
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={!text.trim() || isSending}
+                  className="bg-green-600 hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed px-4 py-2 rounded-lg text-white font-medium"
+                >
+                  {isSending ? 'Sending...' : 'Send'}
+                </button>
         </form>
-      </section>
+            </div>
+          </>
+        ) : (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <h2 className="text-xl font-semibold mb-2">Select a conversation</h2>
+              <p className="text-gray-400">Choose a conversation from the sidebar to start chatting</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* New Chat Modal */}
+      {showNewChatModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 w-96">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold">New Chat</h3>
+              <button 
+                onClick={() => setShowNewChatModal(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-4">
+              <button 
+                onClick={() => {
+                  setShowNewChatModal(false)
+                  setShowGroupModal(true)
+                }}
+                className="w-full p-3 bg-gray-700 hover:bg-gray-600 rounded-lg text-left"
+              >
+                <div className="flex items-center">
+                  <span className="text-2xl mr-3">👥</span>
+                  <span>Create New Group</span>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Group Modal */}
+      {showGroupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-6 w-96">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <span className="mr-2">👥</span>
+                Create New Group
+              </h3>
+              <button 
+                onClick={() => setShowGroupModal(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-2">Group Name</label>
+                <input
+                  type="text"
+                  value={groupName}
+                  onChange={(e) => setGroupName(e.target.value)}
+                  placeholder="Enter group name..."
+                  className="w-full bg-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Add Members</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={memberName}
+                    onChange={(e) => setMemberName(e.target.value)}
+                    placeholder="Enter member name..."
+                    className="flex-1 bg-gray-700 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={addGroupMember}
+                    className="bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg"
+                  >
+                    Add
+                  </button>
+                </div>
+                {groupMembers.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {groupMembers.map((member, i) => (
+                      <div key={i} className="text-sm text-gray-300">• {member}</div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setShowGroupModal(false)}
+                  className="flex-1 bg-gray-700 hover:bg-gray-600 py-2 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createGroup}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 py-2 rounded-lg"
+                >
+                  Create Group
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
-
-

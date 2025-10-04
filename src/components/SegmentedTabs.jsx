@@ -72,7 +72,7 @@ export default function SegmentedTabs({ tabs, value, onChange, instant = false, 
   return (
     <div
       ref={containerRef}
-      className={`${fitToLabel ? 'relative flex flex-wrap gap-1' : 'relative grid'} select-none rounded-full bg-slate-100 p-1 text-sm font-medium text-slate-600 sm:text-base`}
+      className={`${fitToLabel ? 'relative flex flex-wrap gap-1' : 'relative grid'} select-none rounded-full bg-slate-900 p-1 text-sm font-medium text-slate-300 sm:text-base border border-slate-800`}
       style={fitToLabel ? undefined : { gridTemplateColumns: `repeat(${tabs.length}, minmax(0, 1fr))` }}
     >
       {fitToLabel ? (
@@ -109,7 +109,7 @@ export default function SegmentedTabs({ tabs, value, onChange, instant = false, 
           key={t}
           ref={(el) => (buttonRefs.current[i] = el)}
           onClick={() => onChange(i)}
-          className={`relative z-10 inline-flex items-center justify-center rounded-full ${fitToLabel ? 'px-4' : 'px-3'} py-2 transition ${i === value ? 'text-white' : ''}`}
+          className={`relative z-10 inline-flex items-center justify-center rounded-full ${fitToLabel ? 'px-4' : 'px-3'} py-2 transition ${i === value ? 'text-white' : 'text-slate-300'}`}
         >
           {t}
         </button>
@@ -117,5 +117,3 @@ export default function SegmentedTabs({ tabs, value, onChange, instant = false, 
     </div>
   )
 }
-
-

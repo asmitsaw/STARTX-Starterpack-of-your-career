@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STARTX - AI Interview Suite</title>
+    <meta name="description" content="Practice real interviews in a sleek, conversational interface powered by smart AI feedback.">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-text">STARTX</span>
+            </div>
+            <ul class="nav-menu">
+                <li><a href="modern-homepage.html">Home</a></li>
+                <li><a href="news-feed.html">News Feed</a></li>
+                <li><a href="innovation-gallery.html">Innovation</a></li>
+                <li><a href="#ai-interview" class="active">AI Interview</a></li>
+                <li><a href="profile-excellence.html">Profile</a></li>
+            </ul>
+            <div class="nav-buttons">
+                <button class="btn-secondary">Sign In</button>
+                <button class="btn-primary">Get Started</button>
+            </div>
+            <div class="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- AI Interview Suite -->
+    <section id="ai-interview" class="ai-interview">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">AI Interview Suite</h2>
+                <p class="section-subtitle">Practice real interviews in a sleek, conversational interface powered by smart AI feedback</p>
+            </div>
+            
+            <!-- Interview Selection -->
+            <div class="interview-selection">
+                <h3>Choose Your Interview Type</h3>
+                <div class="interview-types">
+                    <div class="interview-type active" data-type="software">
+                        <i class="fas fa-code"></i>
+                        <h4>Software Engineer</h4>
+                        <p>Technical questions and coding challenges</p>
+                    </div>
+                    <div class="interview-type" data-type="product">
+                        <i class="fas fa-lightbulb"></i>
+                        <h4>Product Manager</h4>
+                        <p>Product strategy and case studies</p>
+                    </div>
+                    <div class="interview-type" data-type="data">
+                        <i class="fas fa-chart-bar"></i>
+                        <h4>Data Scientist</h4>
+                        <p>Machine learning and analytics</p>
+                    </div>
+                    <div class="interview-type" data-type="design">
+                        <i class="fas fa-palette"></i>
+                        <h4>UX Designer</h4>
+                        <p>Design thinking and portfolio review</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="interview-container">
+                <div class="interview-interface">
+                    <div class="interview-header">
+                        <div class="interview-info">
+                            <h3>Software Engineer Interview</h3>
+                            <p>Google • Senior Level • 45 minutes</p>
+                        </div>
+                        <div class="interview-timer">
+                            <i class="fas fa-clock"></i>
+                            <span id="timer">00:00</span>
+                        </div>
+                    </div>
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="message ai-message">
+                            <div class="message-avatar">AI</div>
+                            <div class="message-content">
+                                <p>Hello! I'm your AI interviewer today. I'll be asking you technical questions about software engineering. Are you ready to begin?</p>
+                            </div>
+                        </div>
+                        <div class="message user-message">
+                            <div class="message-content">
+                                <p>Yes, I'm ready to start the interview.</p>
+                            </div>
+                            <div class="message-avatar">You</div>
+                        </div>
+                        <div class="message ai-message">
+                            <div class="message-avatar">AI</div>
+                            <div class="message-content">
+                                <p>Great! Let's start with a coding question. Can you explain how you would implement a binary search tree and what its time complexity is?</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="interview-input">
+                        <textarea placeholder="Type your response here..." id="user-input"></textarea>
+                        <button class="btn-primary" id="send-message">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="interview-sidebar">
+                    <div class="feedback-panel">
+                        <h4>Real-time Feedback</h4>
+                        <div class="feedback-item">
+                            <div class="feedback-icon">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="feedback-content">
+                                <h5>Good Technical Knowledge</h5>
+                                <p>Your explanation of data structures shows solid understanding.</p>
+                            </div>
+                        </div>
+                        <div class="feedback-item">
+                            <div class="feedback-icon">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </div>
+                            <div class="feedback-content">
+                                <h5>Improve Communication</h5>
+                                <p>Try to be more concise in your explanations.</p>
+                            </div>
+                        </div>
+                        <div class="feedback-item">
+                            <div class="feedback-icon">
+                                <i class="fas fa-lightbulb"></i>
+                            </div>
+                            <div class="feedback-content">
+                                <h5>Great Problem Solving</h5>
+                                <p>You're approaching the problem systematically.</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="interview-controls">
+                        <button class="btn-outline" id="pause-interview">
+                            <i class="fas fa-pause"></i>
+                            Pause
+                        </button>
+                        <button class="btn-primary" id="resume-interview">
+                            <i class="fas fa-play"></i>
+                            Resume
+                        </button>
+                        <button class="btn-secondary" id="restart-interview">
+                            <i class="fas fa-redo"></i>
+                            Restart
+                        </button>
+                    </div>
+                    <div class="interview-stats">
+                        <h4>Interview Stats</h4>
+                        <div class="stat-item">
+                            <span class="stat-label">Questions Answered</span>
+                            <span class="stat-value">3/10</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Confidence Score</span>
+                            <span class="stat-value">85%</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Communication</span>
+                            <span class="stat-value">Good</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interview History Section -->
+    <section class="interview-history">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Your Interview History</h2>
+                <p class="section-subtitle">Track your progress and review past interviews</p>
+            </div>
+            <div class="history-grid">
+                <div class="history-card">
+                    <div class="history-header">
+                        <h4>Software Engineer - Google</h4>
+                        <span class="history-date">Today</span>
+                    </div>
+                    <div class="history-stats">
+                        <div class="stat">
+                            <span class="stat-number">85%</span>
+                            <span class="stat-label">Score</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">45</span>
+                            <span class="stat-label">Minutes</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">8/10</span>
+                            <span class="stat-label">Questions</span>
+                        </div>
+                    </div>
+                    <div class="history-feedback">
+                        <p>Strong technical skills, good communication. Areas for improvement: time management.</p>
+                    </div>
+                </div>
+                
+                <div class="history-card">
+                    <div class="history-header">
+                        <h4>Product Manager - Amazon</h4>
+                        <span class="history-date">Yesterday</span>
+                    </div>
+                    <div class="history-stats">
+                        <div class="stat">
+                            <span class="stat-number">92%</span>
+                            <span class="stat-label">Score</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">60</span>
+                            <span class="stat-label">Minutes</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">10/10</span>
+                            <span class="stat-label">Questions</span>
+                        </div>
+                    </div>
+                    <div class="history-feedback">
+                        <p>Excellent strategic thinking and case study approach. Strong leadership qualities.</p>
+                    </div>
+                </div>
+                
+                <div class="history-card">
+                    <div class="history-header">
+                        <h4>Data Scientist - Microsoft</h4>
+                        <span class="history-date">3 days ago</span>
+                    </div>
+                    <div class="history-stats">
+                        <div class="stat">
+                            <span class="stat-number">78%</span>
+                            <span class="stat-label">Score</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">50</span>
+                            <span class="stat-label">Minutes</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-number">7/10</span>
+                            <span class="stat-label">Questions</span>
+                        </div>
+                    </div>
+                    <div class="history-feedback">
+                        <p>Good analytical skills, needs improvement in explaining complex concepts.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Interview Tips Section -->
+    <section class="interview-tips">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Interview Tips & Best Practices</h2>
+                <p class="section-subtitle">Improve your interview performance with these proven strategies</p>
+            </div>
+            <div class="tips-grid">
+                <div class="tip-card">
+                    <div class="tip-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h4>Prepare Your Stories</h4>
+                    <p>Have 3-5 specific examples ready for common behavioral questions using the STAR method.</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h4>Time Management</h4>
+                    <p>Practice pacing yourself - spend 2-3 minutes on each question and leave time for follow-ups.</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h4>Clear Communication</h4>
+                    <p>Speak clearly, pause to think, and ask clarifying questions when needed.</p>
+                </div>
+                <div class="tip-card">
+                    <div class="tip-icon">
+                        <i class="fas fa-question-circle"></i>
+                    </div>
+                    <h4>Ask Questions</h4>
+                    <p>Prepare thoughtful questions about the role, team, and company culture.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>STARTX</h3>
+                    <p>Elevate your career journey—where innovation meets opportunity.</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Interview Types</h4>
+                    <ul>
+                        <li><a href="#" data-type="software">Software Engineer</a></li>
+                        <li><a href="#" data-type="product">Product Manager</a></li>
+                        <li><a href="#" data-type="data">Data Scientist</a></li>
+                        <li><a href="#" data-type="design">UX Designer</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Quick Links</h4>
+                    <ul>
+                        <li><a href="modern-homepage.html">Home</a></li>
+                        <li><a href="news-feed.html">News Feed</a></li>
+                        <li><a href="innovation-gallery.html">Innovation</a></li>
+                        <li><a href="profile-excellence.html">Profile</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">Contact</a></li>
+                        <li><a href="#">Privacy</a></li>
+                        <li><a href="#">Terms</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 STARTX. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+    <script>
+        // AI Interview specific functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatMessages = document.getElementById('chat-messages');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-message');
+            const timer = document.getElementById('timer');
+            const interviewTypes = document.querySelectorAll('.interview-type');
+            
+            let interviewTime = 0;
+            let timerInterval;
+            let currentInterviewType = 'software';
+            
+            // Interview type selection
+            interviewTypes.forEach(type => {
+                type.addEventListener('click', () => {
+                    interviewTypes.forEach(t => t.classList.remove('active'));
+                    type.classList.add('active');
+                    currentInterviewType = type.getAttribute('data-type');
+                    showNotification(`Switched to ${type.querySelector('h4').textContent} interview`, 'info');
+                });
+            });
+            
+            // Start timer
+            function startTimer() {
+                timerInterval = setInterval(() => {
+                    interviewTime++;
+                    const minutes = Math.floor(interviewTime / 60);
+                    const seconds = interviewTime % 60;
+                    timer.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                }, 1000);
+            }
+            
+            // Add message to chat
+            function addMessage(content, isUser = false) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
+                
+                if (isUser) {
+                    messageDiv.innerHTML = `
+                        <div class="message-content">
+                            <p>${content}</p>
+                        </div>
+                        <div class="message-avatar">You</div>
+                    `;
+                } else {
+                    messageDiv.innerHTML = `
+                        <div class="message-avatar">AI</div>
+                        <div class="message-content">
+                            <p>${content}</p>
+                        </div>
+                    `;
+                }
+                
+                chatMessages.appendChild(messageDiv);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+            
+            // AI responses based on interview type
+            const aiResponses = {
+                software: [
+                    "That's a great answer! Can you elaborate on your experience with React hooks?",
+                    "Interesting approach. How would you handle state management in a large application?",
+                    "Good thinking! What's your experience with testing frameworks like Jest?",
+                    "Excellent! How do you approach code optimization and performance?",
+                    "That's insightful. Can you walk me through your debugging process?"
+                ],
+                product: [
+                    "Great strategic thinking! How would you prioritize features for a new product?",
+                    "Excellent approach. What metrics would you track to measure success?",
+                    "Good analysis. How would you handle competing stakeholder requirements?",
+                    "That's thoughtful. Can you walk me through a product launch strategy?",
+                    "Interesting perspective. How do you approach user research and feedback?"
+                ],
+                data: [
+                    "Good analytical approach! How would you handle missing data in your analysis?",
+                    "Excellent thinking. What's your experience with machine learning algorithms?",
+                    "Great insights. How do you ensure data quality and validation?",
+                    "That's comprehensive. Can you explain your approach to feature engineering?",
+                    "Interesting methodology. How do you communicate complex findings to stakeholders?"
+                ],
+                design: [
+                    "Great design thinking! How do you approach user research and personas?",
+                    "Excellent process. Can you walk me through your design system approach?",
+                    "Good methodology. How do you handle feedback and iteration?",
+                    "That's thoughtful. What's your experience with prototyping tools?",
+                    "Interesting approach. How do you measure the success of your designs?"
+                ]
+            };
+            
+            let responseIndex = 0;
+            
+            // Send message function
+            function sendMessage() {
+                const message = userInput.value.trim();
+                if (!message) return;
+                
+                // Add user message
+                addMessage(message, true);
+                userInput.value = '';
+                
+                // Simulate AI response
+                setTimeout(() => {
+                    const responses = aiResponses[currentInterviewType];
+                    const aiResponse = responses[responseIndex % responses.length];
+                    addMessage(aiResponse);
+                    responseIndex++;
+                }, 1000);
+            }
+            
+            // Event listeners
+            sendButton.addEventListener('click', sendMessage);
+            userInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Interview controls
+            const pauseBtn = document.getElementById('pause-interview');
+            const resumeBtn = document.getElementById('resume-interview');
+            const restartBtn = document.getElementById('restart-interview');
+            
+            pauseBtn.addEventListener('click', () => {
+                clearInterval(timerInterval);
+                showNotification('Interview paused', 'info');
+            });
+            
+            resumeBtn.addEventListener('click', () => {
+                startTimer();
+                showNotification('Interview resumed', 'success');
+            });
+            
+            restartBtn.addEventListener('click', () => {
+                clearInterval(timerInterval);
+                interviewTime = 0;
+                timer.textContent = '00:00';
+                chatMessages.innerHTML = `
+                    <div class="message ai-message">
+                        <div class="message-avatar">AI</div>
+                        <div class="message-content">
+                            <p>Hello! I'm your AI interviewer today. Are you ready to begin?</p>
+                        </div>
+                    </div>
+                `;
+                responseIndex = 0;
+                showNotification('Interview restarted', 'success');
+            });
+            
+            // Start timer when page loads
+            startTimer();
+        });
+    </script>
+</body>
+</html> 

@@ -1,5 +1,6 @@
 import express from 'express'
 import { query as dbQuery } from '../db.js'
+import { requireAuth } from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -26,6 +27,19 @@ router.get('/', async (_req, res, next) => {
   try {
     const { rows } = await dbQuery(
       `SELECT * FROM jobs ORDER BY created_at DESC`
+    )
+    res.json(rows)
+  } catch (err) { next(err) }
+})
+
+// GET /api/jobs/suggested - latest jobs for the sidebar
+router.get('/suggested', requireAuth, async (_req, res, next) => {
+  try {
+    const { rows } = await dbQuery(
+      `SELECT id, title, company, location, logo_url
+       FROM jobs
+       ORDER BY created_at DESC
+       LIMIT 6`
     )
     res.json(rows)
   } catch (err) { next(err) }
