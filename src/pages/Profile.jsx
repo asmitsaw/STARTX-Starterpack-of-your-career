@@ -35,7 +35,6 @@ export default function Profile() {
   
   // Determine if the signed-in user is viewing their own profile
   const isOwnProfile = !!(user?.id && profile?.id && user.id === profile.id)
-  
   // Initialize socket connection
   useEffect(() => {
     if (!user || !profile) return;

@@ -1,64 +1,6 @@
 // Pitch service for API interactions
-let RESOLVED_API_URL = null;
-
-const unique = (arr) => Array.from(new Set(arr.filter(Boolean)));
-
-const candidateApiUrls = () => {
-  const envUrl = import.meta.env?.VITE_API_URL;
-  const origin = typeof window !== 'undefined' ? window.location.origin : undefined;
-  let devGuess = undefined;
-  if (origin && origin.includes(':5173')) {
-    devGuess = origin.replace(':5173', ':5174');
-  }
-  return unique([
-    envUrl,
-    origin,
-    devGuess,
-    'http://localhost:5174',
-    'http://localhost:5175',
-    'http://localhost:5176',
-  ]);
-};
-
-async function pingHealth(url, signal) {
-  try {
-    const res = await fetch(`${url}/api/health`, { credentials: 'include', signal });
-    if (!res.ok) return false;
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function getApiUrl() {
-  if (RESOLVED_API_URL) return RESOLVED_API_URL;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 1200);
-  try {
-    const candidates = candidateApiUrls();
-    for (const url of candidates) {
-      // If it's clearly a file:// or empty, skip
-      if (!/^https?:\/\//i.test(url)) continue;
-      const ok = await pingHealth(url, controller.signal);
-      if (ok) {
-        RESOLVED_API_URL = url;
-        break;
-      }
-    }
-    // Fallback if none responded
-    if (!RESOLVED_API_URL) {
-      RESOLVED_API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:5174';
-    }
-    return RESOLVED_API_URL;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function getPitchesBase() {
-  const base = await getApiUrl();
-  return `${base}/api/pitches`;
-}
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5174';
+const API_BASE = `${API_URL}/api/pitches`;
 
 /**
  * Fetch all pitches
@@ -66,7 +8,6 @@ async function getPitchesBase() {
  */
 export const fetchPitches = async () => {
   try {
-    const API_BASE = await getPitchesBase();
     const response = await fetch(API_BASE, {
       credentials: 'include', // Include cookies for authentication if needed
       headers: {
@@ -106,8 +47,7 @@ export const fetchPitches = async () => {
  */
 export const votePitch = async (pitchId, voteType) => {
   try {
-    const base = await getApiUrl();
-    const response = await fetch(`${base}/api/pitches/${pitchId}/vote`, {
+    const response = await fetch(`${API_URL}/api/pitches/${pitchId}/vote`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -136,8 +76,7 @@ export const votePitch = async (pitchId, voteType) => {
  */
 export const requestConnect = async (pitchId, message = '') => {
   try {
-    const base = await getApiUrl();
-    const response = await fetch(`${base}/api/pitches/${pitchId}/connect`, {
+    const response = await fetch(`${API_URL}/api/pitches/${pitchId}/connect`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -165,7 +104,6 @@ export const requestConnect = async (pitchId, message = '') => {
  */
 export const fetchPitchDetails = async (id) => {
   try {
-    const API_BASE = await getPitchesBase();
     const response = await fetch(`${API_BASE}/${id}`);
     if (!response.ok) {
       throw new Error('Failed to fetch pitch details');
@@ -184,7 +122,6 @@ export const fetchPitchDetails = async (id) => {
  */
 export const createPitch = async (pitchData) => {
   try {
-    const API_BASE = await getPitchesBase();
     const response = await fetch(API_BASE, {
       method: 'POST',
       headers: {
@@ -214,7 +151,6 @@ export const createPitch = async (pitchData) => {
  */
 export const updatePitch = async (id, pitchData) => {
   try {
-    const API_BASE = await getPitchesBase();
     const response = await fetch(`${API_BASE}/${id}`, {
       method: 'PUT',
       headers: {
@@ -243,7 +179,6 @@ export const updatePitch = async (id, pitchData) => {
  */
 export const deletePitch = async (id) => {
   try {
-    const API_BASE = await getPitchesBase();
     const response = await fetch(`${API_BASE}/${id}`, {
       method: 'DELETE',
       credentials: 'include',
@@ -269,7 +204,6 @@ export const deletePitch = async (id) => {
  */
 export const addComment = async (pitchId, content) => {
   try {
-    const API_BASE = await getPitchesBase();
     const response = await fetch(`${API_BASE}/${pitchId}/comments`, {
       method: 'POST',
       headers: {
@@ -299,7 +233,6 @@ export const addComment = async (pitchId, content) => {
  */
 export const deleteComment = async (pitchId, commentId) => {
   try {
-    const API_BASE = await getPitchesBase();
     const response = await fetch(`${API_BASE}/${pitchId}/comments/${commentId}`, {
       method: 'DELETE',
       credentials: 'include',

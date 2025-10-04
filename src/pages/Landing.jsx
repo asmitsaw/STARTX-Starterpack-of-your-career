@@ -136,10 +136,7 @@ export default function Landing() {
             transition={{ duration: 0.8 }}
             className="text-center"
           >
-            <div className="inline-flex items-center mb-6 bg-gradient-to-r from-emerald-500/20 to-blue-500/20 border border-emerald-500/30 text-emerald-400 px-4 py-1 rounded-full">
-              <Sparkles className="w-3 h-3 mr-2" />
-              Now in Dark Mode
-            </div>
+           
 
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               Build the Future

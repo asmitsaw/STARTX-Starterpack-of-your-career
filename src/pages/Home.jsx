@@ -3,7 +3,53 @@ import { Link } from 'react-router-dom'
 import { icons } from '../assets/icons.jsx'
 import { io } from 'socket.io-client'
 import IMAGEKIT_CONFIG from '../config/imagekit.js'
+import IMAGEKIT_CONFIG from '../config/imagekit.js'
 import MeCard from '../components/MeCard.jsx'
+import { useUser } from '@clerk/clerk-react'
+import axios from 'axios'
+import Header from '../components/Header.jsx' // Used in conditional renders
+
+// Error boundary to catch rendering errors
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Error in component:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-50 dark:bg-dark-900">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="bg-white dark:bg-dark-800 rounded-lg shadow-sm p-6">
+              <h2 className="text-xl font-semibold text-red-600 dark:text-red-400">Something went wrong</h2>
+              <p className="mt-2 text-slate-600 dark:text-slate-300">
+                We're having trouble displaying this page. Please try refreshing or contact support if the problem persists.
+              </p>
+              <button 
+                onClick={() => window.location.reload()} 
+                className="mt-4 bg-startx-600 text-white px-4 py-2 rounded-md hover:bg-startx-700"
+              >
+                Refresh Page
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 import { useUser } from '@clerk/clerk-react'
 import axios from 'axios'
 import Header from '../components/Header.jsx' // Used in conditional renders
@@ -77,6 +123,32 @@ const apiFetch = async (path, opts = {}) => {
     };
   }
 }
+// API helper: sends cookies for JWT with error handling
+const apiFetch = async (path, opts = {}) => {
+  try {
+    const response = await fetch(`${API_BASE}${path}`, { 
+      credentials: 'include', 
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) }, 
+      ...opts 
+    });
+    
+    if (!response.ok) {
+      console.warn(`API response not OK for ${path}: ${response.status}`);
+    }
+    
+    return response;
+  } catch (error) {
+    console.error(`API fetch error for ${path}:`, error);
+    // Return a mock response to prevent UI from breaking
+    return {
+      ok: false,
+      status: 500,
+      statusText: "Error",
+      json: () => Promise.resolve([]),
+      text: () => Promise.resolve('')
+    };
+  }
+}
 
 // Relative time helper
 const formatRelativeTime = (dateLike) => {
@@ -106,7 +178,11 @@ const formatRelativeTime = (dateLike) => {
 function Home() {
   const { user } = useUser()
   const isAuthenticated = !!user
+function Home() {
+  const { user } = useUser()
+  const isAuthenticated = !!user
   const [rolesCount, setRolesCount] = useState(32)
+  // Ensure isAuthenticated is always defined to prevent blank page issues
   // Ensure isAuthenticated is always defined to prevent blank page issues
 
   // App state wired to backend
@@ -312,12 +388,78 @@ function Home() {
        setIsLoading(false);
        // Continue rendering the UI even if socket initialization fails
      }
+    let socket;
+    // Fallback to ensure UI doesn't stay in loading state
+    const loadingTimeout = setTimeout(() => {
+      setIsLoading(false)
+    }, 3000)
+    try {
+      if (API_BASE) {
+        // Use port 5174 instead of 3000 for socket connection
+        socket = io(API_BASE, { 
+          withCredentials: true,
+          reconnection: true,
+          reconnectionAttempts: 5,
+          timeout: 15000,
+          reconnectionDelay: 1000,
+          transports: ['websocket', 'polling']
+        })
+        socket.on('connect', () => {
+          console.log('Socket connected successfully');
+          setIsLoading(false);
+        });
+        socket.on('connect_error', (error) => {
+          console.error('Socket connection error:', error);
+          setIsLoading(false);
+          // Continue rendering the UI even if socket connection fails
+        });
+        socket.on('post:created', ({ post, originClientId }) => {
+          // Accept all posts regardless of client ID to ensure visibility across sessions
+          setPosts((prev) => {
+            // Check if post already exists to avoid duplicates
+            if (prev.some(p => p.id === post.id)) return prev;
+            return [post, ...prev];
+          })
+        });
+        socket.on('post:liked', ({ postId, delta, originClientId }) => {
+          // Accept all like updates regardless of client ID
+          setPosts((prev) => prev.map(p => p.id === postId ? { ...p, likes_count: Math.max(0, (p.likes_count || 0) + delta) } : p))
+        });
+        socket.on('post:commented', ({ postId, originClientId }) => {
+          // Accept all comment updates regardless of client ID
+          setPosts((prev) => prev.map(p => p.id === postId ? { ...p, comments_count: (p.comments_count || 0) + 1 } : p))
+        });
+        socket.on('post:shared', ({ postId, originClientId }) => {
+          // Accept all share updates regardless of client ID
+          setPosts((prev) => prev.map(p => p.id === postId ? { ...p, shares_count: (p.shares_count || 0) + 1 } : p))
+        });
+      }
+    } catch (error) {
+       console.error('Socket initialization error:', error);
+       setIsLoading(false);
+       // Continue rendering the UI even if socket initialization fails
+     }
     const load = async () => {
       try {
         setLoadingFeed(true)
         const res = await apiFetch('/api/posts/feed?limit=10')
         const data = await res.json()
         if (!ignore) {
+          // Merge with local storage posts if available
+          const localPosts = JSON.parse(localStorage.getItem('sx_posts') || '[]');
+          const mergedPosts = [...(data.items || [])];
+          
+          // Add local posts that aren't in the server response
+          localPosts.forEach(localPost => {
+            if (!mergedPosts.some(p => p.id === localPost.id)) {
+              mergedPosts.push(localPost);
+            }
+          });
+          
+          // Sort by creation date (newest first)
+          mergedPosts.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+          
+          setPosts(mergedPosts);
           // Merge with local storage posts if available
           const localPosts = JSON.parse(localStorage.getItem('sx_posts') || '[]');
           const mergedPosts = [...(data.items || [])];
@@ -345,6 +487,11 @@ function Home() {
       clearTimeout(loadingTimeout)
       if (socket) socket.close() 
     }
+    return () => { 
+      ignore = true; 
+      clearTimeout(loadingTimeout)
+      if (socket) socket.close() 
+    }
   }, [])
 
   // Load suggestions and trending
@@ -364,6 +511,7 @@ function Home() {
     if (!postContent.trim() && !postFile) return
     const temp = {
       id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
+      id: `post-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`,
       name: profile?.name || 'You',
       headline: profile?.headline || '',
       content: postContent,
@@ -374,7 +522,11 @@ function Home() {
       created_at: new Date().toISOString(),
       user_id: profile?.id || localStorage.getItem('sx_user_id') || 'anonymous',
       persisted: true // Flag to identify locally persisted posts
+      user_id: profile?.id || localStorage.getItem('sx_user_id') || 'anonymous',
+      persisted: true // Flag to identify locally persisted posts
     }
+    
+    // Add to UI immediately
     
     // Add to UI immediately
     setPosts(prev => [temp, ...prev])
@@ -384,8 +536,15 @@ function Home() {
     localPosts.unshift(temp);
     localStorage.setItem('sx_posts', JSON.stringify(localPosts));
     
+    
+    // Save to localStorage for persistence across sessions
+    const localPosts = JSON.parse(localStorage.getItem('sx_posts') || '[]');
+    localPosts.unshift(temp);
+    localStorage.setItem('sx_posts', JSON.stringify(localPosts));
+    
     setPostContent('')
     setPostFile(null)
+    
     
     try {
       // Upload to ImageKit.io if there's a file
@@ -567,8 +726,48 @@ function Home() {
   }
 
   // Always render the page, even if some data is missing
+  // Show a loading state while data is being fetched
+  if (isLoading && !error) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-dark-900">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex justify-center items-center h-[calc(100vh-64px)]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-startx-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600 dark:text-slate-300">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show an error state if there's an error
+  if (error) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-dark-900">
+        <Header />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 my-4">
+            <h3 className="text-red-800 dark:text-red-400 font-medium">Error loading page</h3>
+            <p className="text-red-700 dark:text-red-300 mt-2">{error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-100 px-4 py-2 rounded-md hover:bg-red-200 dark:hover:bg-red-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Always render the page, even if some data is missing
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-dark-900">
+      {/* Header is already included in conditional renders, no need to duplicate it here */}
+
+      {/* Main Content Layout - Guaranteed to render */}
       {/* Header is already included in conditional renders, no need to duplicate it here */}
 
       {/* Main Content Layout - Guaranteed to render */}
@@ -790,8 +989,31 @@ function Home() {
                       {(post.name || 'U').charAt(0)}
                     </div>
                   )}
+                  {post.avatar_url ? (
+                    <img src={post.avatar_url} alt={post.name} className="w-12 h-12 rounded-full object-cover ring-1 ring-slate-200/70 dark:ring-white/10" />
+                  ) : (
+                    <div className="w-12 h-12 bg-startx-600 rounded-full flex items-center justify-center text-white font-medium shadow-sm">
+                      {(post.name || 'U').charAt(0)}
+                    </div>
+                  )}
                   <div className="flex-1">
                     <div className="flex items-center space-x-2">
+                      <Link to={`/profile/${post.user_id}`} className="font-semibold text-slate-900 text-base hover:text-startx-600">{post.name || 'User'}</Link>
+                      {post.user_id && post.user_id !== user?.id && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          getConnectionStatus(post.user_id) === 'connected' 
+                            ? 'bg-green-100 text-green-700' 
+                            : getConnectionStatus(post.user_id) === 'pending' 
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {getConnectionStatus(post.user_id) === 'connected' 
+                            ? '• Connected' 
+                            : getConnectionStatus(post.user_id) === 'pending' 
+                              ? '• Pending' 
+                              : ''}
+                        </span>
+                      )}
                       <Link to={`/profile/${post.user_id}`} className="font-semibold text-slate-900 text-base hover:text-startx-600">{post.name || 'User'}</Link>
                       {post.user_id && post.user_id !== user?.id && (
                         <span className={`text-xs px-2 py-0.5 rounded-full ${
@@ -823,6 +1045,11 @@ function Home() {
                         // in cases where the content contains malformed URLs
                         const hostname = new URL(url).hostname
                         return (
+                      try {
+                        // Guard URL parsing to avoid runtime errors
+                        // in cases where the content contains malformed URLs
+                        const hostname = new URL(url).hostname
+                        return (
                         <a href={url} target="_blank" rel="noreferrer" className="mt-3 block rounded-lg ring-1 ring-slate-200/70 dark:ring-white/10 overflow-hidden hover:bg-white/5">
                           <div className="flex gap-3 p-3">
                             {meta.image && (
@@ -832,9 +1059,14 @@ function Home() {
                               {meta.title && <div className="text-sm font-medium text-slate-900 dark:text-white truncate">{meta.title}</div>}
                               {meta.description && <div className="text-xs text-slate-600 dark:text-slate-300 line-clamp-2">{meta.description}</div>}
                               <div className="text-[11px] text-slate-500 truncate">{hostname}</div>
+                              <div className="text-[11px] text-slate-500 truncate">{hostname}</div>
                             </div>
                           </div>
                         </a>
+                        )
+                      } catch {
+                        return null
+                      }
                         )
                       } catch {
                         return null
@@ -845,6 +1077,17 @@ function Home() {
                       return post.media_url.match(/\.(mp4|webm|ogg)$/i) ? (
                         <video className="mt-3 w-full rounded-lg ring-1 ring-slate-200/70 dark:ring-white/10" controls src={src} />
                       ) : (
+                        <div className="mt-3 w-full rounded-lg overflow-hidden ring-1 ring-slate-200/70 dark:ring-white/10">
+                          <img 
+                            className="w-full h-auto object-contain max-h-[500px]" 
+                            src={src} 
+                            alt="attachment"
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = './src/assets/avatar.png'; // Fallback image with relative path
+                            }}
+                          />
+                        </div>
                         <div className="mt-3 w-full rounded-lg overflow-hidden ring-1 ring-slate-200/70 dark:ring-white/10">
                           <img 
                             className="w-full h-auto object-contain max-h-[500px]" 
