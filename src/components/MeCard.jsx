@@ -2,7 +2,7 @@ import React, { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProfileCard from './ProfileCard.jsx'
 
-export default function MeCard({ profile, onContactClick, ...props }) {
+export default function MeCard({ profile, onContactClick, contactText, ...props }) {
   const navigate = useNavigate()
   const handleContact = useCallback(() => {
     if (onContactClick) return onContactClick()
@@ -20,13 +20,16 @@ export default function MeCard({ profile, onContactClick, ...props }) {
 
   return (
     <ProfileCard
-      name={mapped?.name ?? props.name}
-      title={mapped?.title ?? props.title}
+      name={mapped?.name ?? props.name ?? 'Your Name'}
+      title={mapped?.title ?? props.title ?? 'Software Developer'}
       avatarUrl={mapped?.avatarUrl ?? props.avatarUrl}
-      handle={mapped?.handle ?? props.handle}
+      handle={mapped?.handle ?? props.handle ?? 'user'}
       status={props.status ?? (profile ? 'Online' : 'Offline')}
+      contactText={contactText ?? 'View Profile'}
       contactDisabled={!profile}
       onContactClick={handleContact}
+      enableTilt={true}
+      showBehindGradient={true}
     />
   )
 }

@@ -319,7 +319,9 @@ CREATE TABLE IF NOT EXISTS interview_sessions (
 -- Enrich interview_sessions with candidate metadata for UI
 ALTER TABLE interview_sessions
   ADD COLUMN IF NOT EXISTS candidate_name TEXT,
-  ADD COLUMN IF NOT EXISTS candidate_email TEXT;
+  ADD COLUMN IF NOT EXISTS candidate_email TEXT,
+  ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'in_progress',
+  ADD COLUMN IF NOT EXISTS score INT;
 
 CREATE TABLE IF NOT EXISTS transcripts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

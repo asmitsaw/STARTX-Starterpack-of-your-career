@@ -10,7 +10,10 @@ export function useSTT() {
 
 	useEffect(() => {
 		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition
-		if (!SpeechRecognition) return
+		if (!SpeechRecognition) {
+			console.warn('Speech Recognition API not supported in this browser')
+			return
+		}
 		const rec = new SpeechRecognition()
 		rec.continuous = true
 		rec.interimResults = true
@@ -24,20 +27,31 @@ export function useSTT() {
 				else interimText += transcript
 			}
 			if (finalText) {
+				console.log('STT Final:', finalText)
 				setResults(r => [...r, { speaker: 'user', text: finalText.trim() }])
 				setInterim('')
 			}
+			if (interimText) {
+				console.log('STT Interim:', interimText)
+			}
 			setInterim(interimText)
 		}
+		rec.onstart = () => {
+			console.log('Speech recognition started')
+			setListening(true)
+		}
 		rec.onend = () => {
+			console.log('Speech recognition ended')
 			setListening(false)
 		}
-		rec.onerror = () => {
+		rec.onerror = (event) => {
+			console.error('Speech recognition error:', event.error)
 			setListening(false)
 		}
 		recognitionRef.current = rec
 		return () => {
 			rec.onresult = null
+			rec.onstart = null
 			rec.onend = null
 			rec.onerror = null
 		}
@@ -45,8 +59,19 @@ export function useSTT() {
 
 	const start = useCallback(() => {
 		if (recognitionRef.current) {
-			try { recognitionRef.current.start(); setListening(true) } catch {}
+			try {
+				console.log('Starting speech recognition...')
+				recognitionRef.current.start()
+				setListening(true)
+			} catch (e) {
+				console.error('Failed to start speech recognition:', e)
+				// If already started, just update state
+				if (e.name === 'InvalidStateError') {
+					setListening(true)
+				}
+			}
 		} else {
+			console.warn('Speech recognition not initialized')
 			setListening(true)
 		}
 	}, [])

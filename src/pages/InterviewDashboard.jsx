@@ -1,23 +1,41 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import InterviewLayout from '../components/InterviewLayout';
 
 const InterviewDashboard = () => {
-  // Mock data for the dashboard
-  const stats = {
-    totalInterviews: 30,
-    completedInterviews: 3,
-    inProgress: 27,
-    averageScore: 8.3,
-    weeklyGrowth: '+12%',
-  };
+  const [stats, setStats] = useState({ totalInterviews: 0, completedInterviews: 0, inProgress: 0, averageScore: 0, weeklyGrowth: '+0%' })
 
-  const recentInterviews = [
-    { id: 1, name: 'atharva', role: 'software engineer', type: 'Technical', date: 'Sep 15', status: 'in progress' },
-    { id: 2, name: 'atharva', role: 'software engineer', type: 'Technical', date: 'Sep 15', status: 'in progress' },
-    { id: 3, name: 'atharva', role: 'software engineer', type: 'Technical', date: 'Sep 15', status: 'in progress' },
-    { id: 4, name: 'atharva', role: 'software engineer', type: 'Technical', date: 'Sep 15', status: 'in progress' },
-  ];
+  const [recentInterviews, setRecentInterviews] = useState([])
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/interview/sessions')
+        const rows = await res.json()
+        if (!Array.isArray(rows)) { setRecentInterviews([]); setStats({ totalInterviews: 0, completedInterviews: 0, inProgress: 0, averageScore: 0, weeklyGrowth: '+0%' }); return }
+        const total = rows.length
+        const completed = rows.filter(r => (r.status || 'in_progress') === 'completed').length
+        const inProgress = total - completed
+        const scored = rows.map(r => r.score).filter(s => typeof s === 'number')
+        const averageScore = scored.length ? Math.round((scored.reduce((a,b)=>a+b,0) / scored.length) * 10) / 10 : 0
+        setStats({ totalInterviews: total, completedInterviews: completed, inProgress, averageScore, weeklyGrowth: '+0%' })
+        const mapped = rows
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 8)
+          .map(r => ({
+            id: r.id,
+            name: r.candidate_name || r.user_id || '—',
+            role: r.role || '—',
+            type: r.mode || 'Technical',
+            date: new Date(r.created_at).toLocaleString(undefined, { month: 'short', day: '2-digit' }),
+            status: (r.status || 'in_progress').replace('_', ' ')
+          }))
+        setRecentInterviews(mapped)
+      } catch (e) {
+        setRecentInterviews([])
+      }
+    })()
+  }, [])
 
   const interviewTypes = [
     { type: 'Technical', count: 29, percentage: '97%' },
@@ -118,8 +136,8 @@ const InterviewDashboard = () => {
                   <tr key={interview.id} className="border-b border-slate-100 last:border-0">
                     <td className="py-3">
                       <div className="flex items-center">
-                        <div className="h-10 w-10 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                          {interview.name.charAt(0).toUpperCase()}
+                        <div className="h-10 w-10 flex-shrink-0 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                          {interview.name && interview.name !== '—' ? interview.name.charAt(0).toUpperCase() : '?'}
                         </div>
                         <div className="ml-4">
                           <p className="text-sm font-medium text-slate-900">{interview.name}</p>

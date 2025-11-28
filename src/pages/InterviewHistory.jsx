@@ -16,8 +16,8 @@ const InterviewHistory = () => {
           position: r.role || '—',
           date: new Date(r.created_at).toISOString().slice(0,10),
           type: r.mode || '—',
-          score: '—',
-          status: 'Completed'
+          score: r.score ?? '—',
+          status: (r.status || 'in_progress').replace('_', ' ')
         }))
         setInterviews(mapped)
       } catch (e) {
@@ -88,15 +88,26 @@ const InterviewHistory = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-slate-200">{interview.score}%</div>
+                      <div className="text-sm text-slate-200">{interview.score !== null && interview.score !== undefined ? `${interview.score}%` : '—'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-emerald-900/50 text-emerald-300">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        interview.status?.toLowerCase() === 'completed' ? 'bg-emerald-900/50 text-emerald-300' : 'bg-yellow-900/50 text-yellow-300'
+                      }`}>
                         {interview.status}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <button className="text-sky-400 hover:text-sky-300 mr-3">View</button>
+                      <button
+                        onClick={async () => {
+                          await fetch(`/api/interview/session/${interview.id}`, { method: 'DELETE' })
+                          setInterviews(prev => prev.filter(x => x.id !== interview.id))
+                        }}
+                        className="text-red-400 hover:text-red-300 mr-3"
+                      >
+                        Delete
+                      </button>
                       <button className="text-slate-400 hover:text-slate-300">Export</button>
                     </td>
                   </tr>

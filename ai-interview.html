@@ -82,6 +82,12 @@
                             <span id="timer">00:00</span>
                         </div>
                     </div>
+                    <div class="interview-actions" style="padding: 1rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 0.75rem;">
+                        <button class="btn-secondary" id="open-session">
+                            <i class="fas fa-video"></i>
+                            Start AI Interview (Fullscreen)
+                        </button>
+                    </div>
                     <div class="chat-messages" id="chat-messages">
                         <div class="message ai-message">
                             <div class="message-avatar">AI</div>
@@ -344,6 +350,65 @@
             </div>
         </div>
     </footer>
+
+    <!-- Fullscreen AI Interview Session Overlay -->
+    <div id="ai-session" class="session-overlay" aria-hidden="true" role="dialog">
+        <div class="session-container" role="document" aria-label="AI Interview Session">
+            <!-- Top Section: Two camera feeds side by side -->
+            <div class="session-top">
+                <div class="camera-box ai-box">
+                    <div class="camera-header">
+                        <div class="camera-title"><i class="fas fa-robot"></i> AI Interviewer</div>
+                        <div class="camera-status" id="ai-status">Online</div>
+                    </div>
+                    <div class="camera-feed" id="ai-feed">
+                        <!-- Placeholder avatar/video -->
+                        <div class="avatar-circle"><i class="fas fa-user-astronaut"></i></div>
+                    </div>
+                </div>
+                <div class="camera-box candidate-box">
+                    <div class="camera-header">
+                        <div class="camera-title"><i class="fas fa-user"></i> You</div>
+                        <div class="camera-status" id="user-status">Mic On · Cam On</div>
+                    </div>
+                    <div class="camera-feed" id="user-feed">
+                        <!-- Placeholder webcam -->
+                        <div class="avatar-circle"><i class="fas fa-user"></i></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Section: Transcription -->
+            <div class="session-bottom">
+                <div class="transcript" id="transcript">
+                    <div class="transcript-line"><span class="speaker ai">AI:</span> Welcome to your interview. Ready to begin?</div>
+                    <div class="transcript-line"><span class="speaker you">You:</span> Yes, I’m ready.</div>
+                </div>
+            </div>
+
+            <!-- Code Editor Panel (hidden by default) -->
+            <aside id="code-editor" class="editor-panel" aria-hidden="true">
+                <div class="editor-header">
+                    <span><i class="fas fa-code"></i> Code Editor</span>
+                    <button class="btn-outline btn-small" id="close-editor"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="editor-body">
+                    <textarea id="editor-textarea" placeholder="Write your solution here..." spellcheck="false"></textarea>
+                </div>
+                <div class="editor-footer">
+                    <button class="btn-primary btn-small" id="check-code"><i class="fas fa-check-circle"></i> Check Code</button>
+                </div>
+            </aside>
+
+            <!-- Floating Controls -->
+            <div class="floating-controls" aria-label="Session Controls">
+                <button class="control-btn" id="toggle-mic" aria-pressed="true" title="Toggle Mic (M)"><i class="fas fa-microphone"></i></button>
+                <button class="control-btn" id="toggle-cam" aria-pressed="true" title="Toggle Camera (C)"><i class="fas fa-video"></i></button>
+                <button class="control-btn" id="open-editor" title="Open Editor (E)"><i class="fas fa-code"></i></button>
+                <button class="control-btn end" id="end-session" title="End Session"><i class="fas fa-square"></i></button>
+            </div>
+        </div>
+    </div>
 
     <script src="script.js"></script>
     <script>

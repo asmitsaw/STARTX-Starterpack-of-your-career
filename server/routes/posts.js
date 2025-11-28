@@ -25,8 +25,20 @@ const router = express.Router()
 
 router.post('/', clerkAuth, upload.single('media'), async (req, res, next) => {
   try {
+    console.log('📝 Post creation request:', {
+      content: req.body.content,
+      media_type: req.body.media_type,
+      has_file: !!req.file,
+      has_metadata: !!req.body.media_metadata,
+      user_id: req.user?.id
+    })
+    
     const { content, media_type, media_metadata } = req.body
-    if (!content) return res.status(400).json({ error: 'content_required' })
+    // Allow posts with either content OR media (or both)
+    if (!content && !req.file && !media_metadata) {
+      console.log('❌ Rejected: No content or media')
+      return res.status(400).json({ error: 'content_or_media_required' })
+    }
     
     // User is already created/synced by clerkAuth middleware
     // No need to check again
@@ -47,35 +59,34 @@ router.post('/', clerkAuth, upload.single('media'), async (req, res, next) => {
       try {
         const metadata = JSON.parse(media_metadata)
         media_url = metadata.url
-        media_urls = JSON.stringify({
-          small: metadata.small || metadata.url,
-          medium: metadata.medium || metadata.url,
-          large: metadata.large || metadata.url,
-          original: metadata.url
-        })
+        // Store the parsed JSON object for JSONB column
+        media_urls = metadata
       } catch (err) {
         console.error('Failed to parse media metadata:', err)
       }
     }
     
-    // Insert post with enhanced media information and encryption flag
+    // Insert post with enhanced media information
     const { rows } = await query(
       `INSERT INTO posts 
-       (author_id, content, media_url, media_type, media_urls, visibility, is_encrypted) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7) 
+       (author_id, content, media_url, media_type) 
+       VALUES ($1, $2, $3, $4) 
        RETURNING *`,
       [
         req.user.id, 
-        content, 
+        content || '', // Allow empty content if media is present
         media_url, 
-        media_type || null, 
-        media_urls, 
-        'connections', // Changed from public to connections for better privacy
-        true // Enable encryption for content
+        media_type || null
       ]
     )
     
     const created = rows[0]
+    
+    // Add user information to the response
+    created.name = req.user.name
+    created.avatar_url = req.user.avatar_url
+    created.user_id = req.user.id
+    created.headline = req.user.headline || ''
     
     // Add connection information to the response
     created.connections = connectionCheck.rows.map(c => c.status)
@@ -103,12 +114,27 @@ router.post('/', clerkAuth, upload.single('media'), async (req, res, next) => {
     });
     
     // Emit to all connected users
+    console.log(`[Posts] Emitting to ${connectedUsers.length} connected users`)
     connectedUsers.forEach(connection => {
+      console.log(`[Posts] Emitting post:new to user:${connection.connected_id}`)
+      
       io.to(`user:${connection.connected_id}`).emit('post:created', { 
         post: created, 
         originClientId: req.headers['x-client-id'] || null,
         hasMedia: !!media_url
       });
+      
+      // Also emit notification event for toast notifications
+      const notificationData = {
+        post_id: created.id,
+        author_id: req.user.id,
+        author_name: req.user.name,
+        author_avatar: req.user.avatar_url,
+        content: created.content,
+        created_at: created.created_at
+      }
+      console.log('[Posts] Notification data:', notificationData)
+      io.to(`user:${connection.connected_id}`).emit('post:new', notificationData);
     });
   } catch (e) { next(e) }
 })
@@ -117,39 +143,58 @@ router.get('/feed', clerkAuth, async (req, res, next) => {
   try {
     const limit = Math.min(parseInt(req.query.limit || '10', 10), 50)
     const cursor = req.query.cursor || null
-    const params = [req.user.id, limit]
+    const requestedUserId = req.query.userId // Specific user's posts (for profile page)
+    const currentUserId = req.user.id // Authenticated user
+    
+    const params = [currentUserId, limit]
     let cursorClause = ''
     if (cursor) {
       params.push(cursor)
       cursorClause = 'AND p.created_at < $3::timestamptz'
     }
-    const sql = `
-      SELECT p.*, u.name, u.headline, u.avatar_url, u.id as user_id
-      FROM posts p
-      JOIN users u ON u.id = p.author_id
-      WHERE (
-        p.author_id = $1 OR p.author_id IN (
-          SELECT connected_user_id FROM connections WHERE user_id=$1 AND status='accepted'
-        )
-      )
-      ${cursorClause}
-      ORDER BY p.created_at DESC
-      LIMIT $2
-    `
+    
+    let sql
+    
+    // If userId is specified, show ONLY that user's posts (for profile page)
+    if (requestedUserId) {
+      console.log(`[Feed] Fetching posts for specific user: ${requestedUserId}`)
+      params[0] = requestedUserId
+      sql = `
+        SELECT p.*, u.name, u.headline, u.avatar_url, u.id as user_id
+        FROM posts p
+        JOIN users u ON u.id = p.author_id
+        WHERE p.author_id = $1
+        ${cursorClause}
+        ORDER BY p.created_at DESC
+        LIMIT $2
+      `
+    } else {
+      // No userId specified - show current user's posts + connections' posts (for home feed)
+      console.log(`[Feed] Fetching feed for user: ${currentUserId} (own + connections)`)
+      sql = `
+        SELECT DISTINCT p.*, u.name, u.headline, u.avatar_url, u.id as user_id
+        FROM posts p
+        JOIN users u ON u.id = p.author_id
+        WHERE 
+          p.author_id = $1
+          OR p.author_id IN (
+            SELECT connected_user_id FROM connections 
+            WHERE user_id = $1 AND status = 'accepted'
+            UNION
+            SELECT user_id FROM connections 
+            WHERE connected_user_id = $1 AND status = 'accepted'
+          )
+        ${cursorClause}
+        ORDER BY p.created_at DESC
+        LIMIT $2
+      `
+    }
+    
     const { rows } = await query(sql, params)
     
-    // Decrypt content if encrypted
-    const posts = rows.map(post => {
-      if (post.is_encrypted && post.content) {
-        return {
-          ...post,
-          content: req.security.decrypt(post.content)
-        }
-      }
-      return post
-    })
+    console.log(`[Feed] Returning ${rows.length} posts`)
     
-    res.json({ items: posts, nextCursor: posts.length ? posts[posts.length - 1].created_at : null })
+    res.json({ items: rows, nextCursor: rows.length ? rows[rows.length - 1].created_at : null })
   } catch (e) { next(e) }
 })
 
@@ -231,6 +276,73 @@ router.get('/:id/comments', clerkAuth, async (req, res, next) => {
       [id]
     )
     res.json(rows)
+  } catch (e) { next(e) }
+})
+
+// Delete a post (only by author)
+router.delete('/:id', clerkAuth, async (req, res, next) => {
+  try {
+    const { id } = req.params
+    
+    // Check if user is the author
+    const { rows } = await query('SELECT author_id, media_url FROM posts WHERE id = $1', [id])
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Post not found' })
+    }
+    
+    const post = rows[0]
+    if (post.author_id !== req.user.id) {
+      return res.status(403).json({ error: 'Not authorized to delete this post' })
+    }
+    
+    // Delete associated media file if it exists locally
+    if (post.media_url && post.media_url.startsWith('/uploads/')) {
+      const filePath = path.join(process.cwd(), post.media_url)
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath)
+      }
+    }
+    
+    // Delete the post (cascade will delete likes and comments)
+    await query('DELETE FROM posts WHERE id = $1', [id])
+    
+    res.json({ ok: true })
+    
+    // Emit deletion event
+    io.emit('post:deleted', { postId: id, userId: req.user.id })
+  } catch (e) { next(e) }
+})
+
+// Get missed notifications (posts created while user was offline)
+router.get('/missed-notifications', clerkAuth, async (req, res, next) => {
+  try {
+    const userId = req.user.id
+    
+    // Get user's last seen time (you can track this in a user_activity table)
+    // For now, get posts from last 24 hours
+    const { rows } = await query(
+      `SELECT p.id, p.content, p.created_at, p.author_id,
+              u.name as author_name, u.avatar_url as author_avatar
+       FROM posts p
+       JOIN users u ON u.id = p.author_id
+       WHERE p.author_id != $1
+         AND p.created_at > NOW() - INTERVAL '24 hours'
+         AND (
+           p.author_id IN (
+             SELECT connected_user_id FROM connections 
+             WHERE user_id = $1 AND status = 'accepted'
+           )
+           OR p.author_id IN (
+             SELECT user_id FROM connections 
+             WHERE connected_user_id = $1 AND status = 'accepted'
+           )
+         )
+       ORDER BY p.created_at DESC
+       LIMIT 5`,
+      [userId]
+    )
+    
+    res.json({ posts: rows })
   } catch (e) { next(e) }
 })
 

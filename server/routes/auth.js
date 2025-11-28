@@ -1,9 +1,21 @@
 import express from 'express'
 import bcrypt from 'bcryptjs'
 import { query } from '../db.js'
-import { issueToken } from '../middleware/auth.js'
+import { issueToken, requireAuth } from '../middleware/auth.js'
 
 const router = express.Router()
+
+// Debug endpoint to check auth status
+router.get('/check-auth', requireAuth, (req, res) => {
+  res.json({
+    authenticated: true,
+    user: {
+      id: req.user.id,
+      email: req.user.email,
+      name: req.user.name
+    }
+  })
+})
 
 // Dev/demo endpoint: create or fetch demo user and issue JWT
 router.post('/demo', async (req, res, next) => {
@@ -72,21 +84,29 @@ router.post('/ensure-user', async (req, res, next) => {
       [clerkUserId, clerkEmail]
     )
 
+    let userId
     if (existing.length > 0) {
-      // User exists, update clerk_id if missing and return their data
+      // User exists, update clerk_id if missing
       if (!existing[0].clerk_id) {
         await query('UPDATE users SET clerk_id = $1 WHERE id = $2', [clerkUserId, existing[0].id])
       }
-      return res.json({ user: existing[0] })
+      userId = existing[0].id
+    } else {
+      // User doesn't exist, create them
+      const { rows: newUser } = await query(
+        'INSERT INTO users (clerk_id, name, email, headline, avatar_url) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, headline, avatar_url, created_at',
+        [clerkUserId, clerkName || null, clerkEmail || null, null, clerkImageUrl || null]
+      )
+      userId = newUser[0].id
     }
 
-    // User doesn't exist, create them
-    const { rows: newUser } = await query(
-      'INSERT INTO users (clerk_id, name, email, headline, avatar_url) VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, headline, avatar_url, created_at',
-      [clerkUserId, clerkName || null, clerkEmail || null, null, clerkImageUrl || null]
-    )
-
-    res.status(201).json({ user: newUser[0] })
+    // Issue JWT token for authentication
+    const token = issueToken(userId, res)
+    
+    res.json({ 
+      user: existing[0] || { id: userId, name: clerkName, email: clerkEmail },
+      token 
+    })
   } catch (e) { 
     console.error('Ensure user error:', e)
     next(e) 

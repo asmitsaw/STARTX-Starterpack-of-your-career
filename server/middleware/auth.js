@@ -71,12 +71,19 @@ export async function requireAuth(req, res, next) {
 
 export function issueToken(userId, res) {
   const token = jwt.sign({}, process.env.JWT_SECRET, { subject: String(userId), expiresIn: '7d' })
+  
+  console.log('[Auth] Issuing JWT token for user:', userId)
+  
   res.cookie(TOKEN_NAME, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: false, // Must be false for localhost
+    domain: 'localhost', // Explicitly set domain
+    path: '/',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   })
+  
+  console.log('[Auth] Cookie set:', TOKEN_NAME)
   return token
 }
 

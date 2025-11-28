@@ -22,10 +22,15 @@ import Activity from './pages/Activity.jsx'
 import Profile from './pages/Profile.jsx'
 import { useAuth as useClerkAuth, SignedIn, SignedOut } from '@clerk/clerk-react'
 import Learning from './pages/Learning.jsx'
-import Message from './pages/Message.jsx'
+import MessengerNew from './pages/MessengerNew.jsx'
+import Premium from './pages/Premium.jsx'
+import PremiumSuccess from './pages/PremiumSuccess.jsx'
+import AuthTest from './pages/AuthTest.jsx'
 import { AuthProvider, useAuth } from './contexts/AuthContext.jsx'
 import { ThemeProvider } from './contexts/ThemeContext.jsx'
+import { SubscriptionProvider } from './contexts/SubscriptionContext.jsx'
 import ClickSpark from './components/ClickSpark.jsx'
+import PostNotification from './components/PostNotification.jsx'
 
 // Protected Route Component
 function ProtectedRoute({ children }) {
@@ -52,6 +57,11 @@ function AppContent() {
   const { showAuthModal, authMode, openAuthModal, closeAuthModal } = useAuth()
   const { isSignedIn, user } = useClerkAuth()
 
+  // Debug logging
+  useEffect(() => {
+    console.log('[App] Auth state:', { isSignedIn, hasUser: !!user, userId: user?.id })
+  }, [isSignedIn, user])
+
   useEffect(() => {
     // Auto-close auth modal once Clerk reports signed-in
     if (isSignedIn && showAuthModal) {
@@ -63,9 +73,13 @@ function AppContent() {
   useEffect(() => {
     const ensure = async () => {
       try {
-        if (!user) return
+        if (!user) {
+          console.log('[App] No user yet, skipping ensure')
+          return
+        }
         
-        const res = await fetch('http://localhost:5174/api/ensure-user', { 
+        console.log('[App] 🔄 Ensuring user in database...', user.id)
+        const res = await fetch('http://localhost:5174/api/auth/ensure-user', { 
           method: 'POST', 
           credentials: 'include',
           headers: {
@@ -78,11 +92,28 @@ function AppContent() {
             clerkImageUrl: user.imageUrl
           })
         })
-        // ignore body
-      } catch {}
+        
+        if (res.ok) {
+          const data = await res.json()
+          console.log('[App] ✅ User ensured, JWT token set!')
+          console.log('[App] Token cookie should now be set')
+          // Force a small delay to ensure cookie is set
+          await new Promise(resolve => setTimeout(resolve, 100))
+        } else {
+          const errorText = await res.text()
+          console.error('[App] ❌ Failed to ensure user:', res.status, errorText)
+        }
+      } catch (error) {
+        console.error('[App] ❌ Error ensuring user:', error)
+      }
     }
-    if (isSignedIn && !showAuthModal && user) ensure()
-  }, [isSignedIn, showAuthModal, user])
+    
+    // Call ensure whenever user is available and signed in
+    if (isSignedIn && user) {
+      console.log('[App] User signed in, calling ensure...')
+      ensure()
+    }
+  }, [isSignedIn, user])
 
   return (
     <BrowserRouter>
@@ -90,6 +121,7 @@ function AppContent() {
         <div className="min-h-screen no-shift bg-white text-gray-900 dark:bg-dark-950 dark:text-white">
           <SignedIn>
             <Header />
+            <PostNotification />
           </SignedIn>
           <SignedOut>
             <PublicHeader />
@@ -109,10 +141,13 @@ function AppContent() {
               <Route path="/pitch" element={<ProtectedRoute><Pitch /></ProtectedRoute>} />
               <Route path="/activity" element={<ProtectedRoute><Activity /></ProtectedRoute>} />
               <Route path="/resume" element={<ProtectedRoute><Resume /></ProtectedRoute>} />
-              <Route path="/premium" element={<ProtectedRoute><Package /></ProtectedRoute>} />
+              <Route path="/premium" element={<ProtectedRoute><Premium /></ProtectedRoute>} />
+              <Route path="/premium/success" element={<ProtectedRoute><PremiumSuccess /></ProtectedRoute>} />
+              <Route path="/auth-test" element={<ProtectedRoute><AuthTest /></ProtectedRoute>} />
               <Route path="/learning" element={<ProtectedRoute><Learning /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/message" element={<ProtectedRoute><Message /></ProtectedRoute>} />
+              <Route path="/profile/:userId" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/message" element={<ProtectedRoute><MessengerNew /></ProtectedRoute>} />
             </Routes>
           </main>
           <Footer />
@@ -133,7 +168,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <SubscriptionProvider>
+          <AppContent />
+        </SubscriptionProvider>
       </AuthProvider>
     </ThemeProvider>
   )

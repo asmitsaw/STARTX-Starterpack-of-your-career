@@ -2,10 +2,12 @@ import React, { useState } from 'react'
 import CodeEditor from './CodeEditor'
 
 const QuestionPanel = ({ question, onSubmit }) => {
-	const [selected, setSelected] = useState(null)
-	const [code, setCode] = useState('')
-	const [text, setText] = useState('')
-	const [showSolution, setShowSolution] = useState(false)
+    const [selected, setSelected] = useState(null)
+    const [code, setCode] = useState('')
+    const [text, setText] = useState('')
+    const [showSolution, setShowSolution] = useState(false)
+    const [showEditor, setShowEditor] = useState(false)
+    const [allowTyping, setAllowTyping] = useState(false)
 
 	console.log('QuestionPanel received question:', question)
 
@@ -17,14 +19,16 @@ const QuestionPanel = ({ question, onSubmit }) => {
 		)
 	}
 
-	const submit = () => {
-		const payload = question.type === 'mcq' ? { choice: selected } : question.type === 'coding' ? { code } : { text }
+    const submit = () => {
+        const payload = question.type === 'mcq' ? { choice: selected } : question.type === 'coding' ? { code } : { text }
 		onSubmit?.({ questionId: question.id, ...payload })
 		// Reset form
 		setSelected(null)
 		setCode('')
 		setText('')
 		setShowSolution(false)
+        setShowEditor(false)
+        setAllowTyping(false)
 	}
 
 	const isCorrect = question.type === 'mcq' && selected === question.correct
@@ -74,9 +78,18 @@ const QuestionPanel = ({ question, onSubmit }) => {
 				</div>
 			)}
 
-			{question.type === 'coding' && (
-				<div className="space-y-3">
-					<CodeEditor value={code} onChange={setCode} language={question.language || 'javascript'} />
+            {question.type === 'coding' && (
+                <div className="space-y-3">
+                    {!showEditor ? (
+                        <button
+                            onClick={() => setShowEditor(true)}
+                            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg"
+                        >
+                            Open Code Editor
+                        </button>
+                    ) : (
+                        <CodeEditor value={code} onChange={setCode} language={question.language || 'javascript'} />
+                    )}
 					{question.solution && (
 						<div className="space-y-2">
 							<button 
@@ -95,43 +108,48 @@ const QuestionPanel = ({ question, onSubmit }) => {
 				</div>
 			)}
 
-			{question.type === 'text' && (
-				<div className="space-y-3">
-					<textarea 
-						className="w-full bg-slate-700 text-white border border-slate-500 rounded-lg p-4 text-base resize-none" 
-						rows={8} 
-						value={text} 
-						onChange={(e) => setText(e.target.value)}
-						placeholder="Type your detailed answer here..."
-					/>
-					<p className="text-sm text-slate-300">
-						{text.length} characters
-					</p>
-				</div>
-			)}
+            {question.type === 'text' && (
+                <div className="space-y-3">
+                    {!allowTyping && (
+                        <div className="text-sm text-slate-300">
+                            Answer verbally. Your microphone input is being transcribed in real-time.
+                            <button onClick={() => setAllowTyping(true)} className="ml-2 text-blue-400 hover:text-blue-300">Type instead</button>
+                        </div>
+                    )}
+                    {allowTyping && (
+                        <>
+                            <textarea 
+                                className="w-full bg-slate-700 text-white border border-slate-500 rounded-lg p-4 text-base resize-none" 
+                                rows={8} 
+                                value={text} 
+                                onChange={(e) => setText(e.target.value)}
+                                placeholder="Type your detailed answer here..."
+                            />
+                            <p className="text-sm text-slate-300">{text.length} characters</p>
+                        </>
+                    )}
+                </div>
+            )}
 
-			<div className="flex justify-between items-center pt-4 border-t border-slate-700">
+            <div className="flex justify-between items-center pt-4 border-t border-slate-700">
 				{question.type === 'mcq' && selected !== null && (
 					<p className="text-sm text-slate-200">
 						Selected: {question.options[selected]}
 					</p>
 				)}
-				{question.type === 'text' && text.length > 0 && (
-					<p className="text-sm text-slate-200">
-						Ready to submit
-					</p>
-				)}
-				<button 
-					className={`px-8 py-3 rounded-lg font-medium transition-colors ${
-						(question.type === 'mcq' && selected === null) || (question.type === 'text' && text.trim() === '')
-							? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-							: 'bg-blue-600 hover:bg-blue-700 text-white'
-					}`}
-					onClick={submit}
-					disabled={(question.type === 'mcq' && selected === null) || (question.type === 'text' && text.trim() === '')}
-				>
-					Submit Answer
-				</button>
+                {question.type !== 'text' && (
+                    <button 
+                        className={`px-8 py-3 rounded-lg font-medium transition-colors ${
+                            (question.type === 'mcq' && selected === null) || (question.type === 'coding' && (!code || code.trim() === ''))
+                                ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
+                                : 'bg-blue-600 hover:bg-blue-700 text-white'
+                        }`}
+                        onClick={submit}
+                        disabled={(question.type === 'mcq' && selected === null) || (question.type === 'coding' && (!code || code.trim() === ''))}
+                    >
+                        Submit Answer
+                    </button>
+                )}
 			</div>
 		</div>
 	)

@@ -1,34 +1,55 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
 import InterviewLayout from '../components/InterviewLayout';
 
 const InterviewAnalytics = () => {
-  // Mock data for analytics
-  const stats = {
-    averageScore: 8.3,
-    totalInterviews: 3,
-    hireRate: '100.0%',
+  const { user } = useUser();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    averageScore: 0,
+    totalInterviews: 0,
+    hireRate: '0%',
     topInterviewType: 'technical',
-  };
-
-  const scoreDistribution = [
+  });
+  const [scoreDistribution, setScoreDistribution] = useState([
     { range: '0-2', count: 0 },
     { range: '3-4', count: 0 },
     { range: '5-6', count: 0 },
-    { range: '7-8', count: 1 },
-    { range: '9-10', count: 1 },
-  ];
+    { range: '7-8', count: 0 },
+    { range: '9-10', count: 0 },
+  ]);
+  const [weeklyTrends, setWeeklyTrends] = useState([]);
 
-  const weeklyTrends = [
-    { date: 'Jul 27', total: 0, completed: 0 },
-    { date: 'Aug 3', total: 0, completed: 0 },
-    { date: 'Aug 10', total: 0, completed: 0 },
-    { date: 'Aug 17', total: 0, completed: 0 },
-    { date: 'Aug 24', total: 0, completed: 0 },
-    { date: 'Aug 31', total: 0, completed: 0 },
-    { date: 'Sep 7', total: 0, completed: 0 },
-    { date: 'Sep 14', total: 30, completed: 3 },
-  ];
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      if (!user?.id) return;
+      
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/interview/analytics`, {
+          credentials: 'include' // Include cookies for authentication
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.stats) setStats(data.stats);
+        if (data.scoreDistribution) setScoreDistribution(data.scoreDistribution);
+        if (data.weeklyTrends) setWeeklyTrends(data.weeklyTrends);
+      } catch (error) {
+        console.error('Error fetching analytics:', error);
+        // Keep default values on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, [user?.id]);
 
   // Helper function to calculate bar width percentage
   const getBarWidth = (count, maxCount) => {
@@ -45,6 +66,13 @@ const InterviewAnalytics = () => {
   return (
     <InterviewLayout>
       <div className="px-6 py-8">
+      {loading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+          <span className="ml-3 text-slate-600">Loading analytics...</span>
+        </div>
+      ) : (
+      <>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900">Interview Analytics</h1>
         <p className="text-slate-600">Comprehensive insights into interview performance</p>
@@ -177,6 +205,8 @@ const InterviewAnalytics = () => {
           </div>
         </div>
       </div>
+      </>
+      )}
       </div>
     </InterviewLayout>
   );

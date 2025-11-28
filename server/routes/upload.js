@@ -4,10 +4,16 @@ import fetch from 'node-fetch';
 import FormData from 'form-data';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 
 const router = express.Router();
 const MAX_RETRIES = 3;
 const TIMEOUT_MS = 15000; // 15 seconds timeout
+
+// ImageKit credentials - these should be in environment variables
+const IMAGEKIT_PRIVATE_KEY = process.env.IMAGEKIT_PRIVATE_KEY || '';
+const IMAGEKIT_PUBLIC_KEY = process.env.IMAGEKIT_PUBLIC_KEY || '';
+const IMAGEKIT_URL_ENDPOINT = process.env.IMAGEKIT_URL_ENDPOINT || '';
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
@@ -21,6 +27,18 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
+// Generate authentication parameters for ImageKit
+function generateAuthParams() {
+  const token = crypto.randomBytes(16).toString('hex');
+  const expire = Math.floor(Date.now() / 1000) + 3600; // 1 hour from now
+  const signature = crypto
+    .createHmac('sha1', IMAGEKIT_PRIVATE_KEY)
+    .update(token + expire)
+    .digest('hex');
+  
+  return { token, expire, signature };
+}
+
 // Handle ImageKit uploads
 router.post('/', upload.single('file'), async (req, res) => {
   try {
@@ -29,11 +47,26 @@ router.post('/', upload.single('file'), async (req, res) => {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
+    // Check if ImageKit credentials are configured
+    if (!IMAGEKIT_PRIVATE_KEY || !IMAGEKIT_PUBLIC_KEY) {
+      console.error('ImageKit credentials not configured');
+      return res.status(500).json({ 
+        error: 'Upload service not configured',
+        message: 'ImageKit credentials are missing. Please configure IMAGEKIT_PRIVATE_KEY and IMAGEKIT_PUBLIC_KEY environment variables.'
+      });
+    }
+
+    // Generate authentication parameters
+    const { token, expire, signature } = generateAuthParams();
+
     // Create form data for ImageKit
     const form = new FormData();
     form.append('file', fs.createReadStream(file.path));
     form.append('fileName', `startx_${Date.now()}`);
-    form.append('publicKey', req.body.publicKey);
+    form.append('publicKey', IMAGEKIT_PUBLIC_KEY);
+    form.append('signature', signature);
+    form.append('expire', expire.toString());
+    form.append('token', token);
 
     // Send to ImageKit with retry mechanism
     let response;
@@ -72,6 +105,16 @@ router.post('/', upload.single('file'), async (req, res) => {
     // Clean up the temporary file
     fs.unlinkSync(file.path);
 
+    // Check if ImageKit returned an error
+    if (data.error) {
+      console.error('ImageKit error:', data);
+      return res.status(400).json({ 
+        error: 'ImageKit upload failed',
+        message: data.message || data.help || 'Unknown ImageKit error',
+        details: data
+      });
+    }
+
     // Return the ImageKit response
     return res.json(data);
   } catch (error) {
@@ -94,91 +137,7 @@ router.post('/', upload.single('file'), async (req, res) => {
     
     return res.status(500).json({ 
       error: 'Upload failed', 
-      details: error.message,
       retryable: true
-    });
-  }
-});
-
-export default router;
-import express from 'express';
-import multer from 'multer';
-import fetch from 'node-fetch';
-import FormData from 'form-data';
-import fs from 'fs';
-import path from 'path';
-
-const router = express.Router();
-const MAX_RETRIES = 3;
-const TIMEOUT_MS = 15000; // 15 seconds timeout
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/');
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
-
-const upload = multer({ storage: storage });
-
-// Handle file uploads (local storage fallback)
-router.post('/', upload.single('file'), async (req, res) => {
-  console.log('Upload request received');
-  console.log('File:', req.file);
-  console.log('Body:', req.body);
-  
-  try {
-    const { file } = req;
-    if (!file) {
-      console.error('No file in request');
-      return res.status(400).json({ error: 'No file uploaded' });
-    }
-
-    // Get the public API base URL
-    const publicBase = req.app.get('PUBLIC_API_BASE') || `http://localhost:${process.env.PORT || 5174}`;
-    
-    // Return local file URL
-    const fileUrl = `${publicBase}/uploads/${file.filename}`;
-    
-    console.log('File uploaded successfully:', fileUrl);
-    console.log('File details:', {
-      filename: file.filename,
-      size: file.size,
-      mimetype: file.mimetype,
-      path: file.path
-    });
-    
-    const response = {
-      success: true,
-      url: fileUrl,
-      path: `/uploads/${file.filename}`,
-      filename: file.filename,
-      size: file.size,
-      mimetype: file.mimetype
-    };
-    
-    console.log('Sending response:', response);
-    return res.json(response);
-  } catch (error) {
-    console.error('Upload error:', error);
-    console.error('Error stack:', error.stack);
-    
-    // Clean up file if it exists
-    if (req.file && req.file.path) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (cleanupError) {
-        console.error('Error cleaning up file:', cleanupError);
-      }
-    }
-    
-    return res.status(500).json({ 
-      error: 'Upload failed', 
-      details: error.message,
-      stack: error.stack
     });
   }
 });

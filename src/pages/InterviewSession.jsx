@@ -7,6 +7,8 @@ const InterviewSession = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [interviewParams, setInterviewParams] = useState(null);
+  const [isFullscreen, setIsFullscreen] = useState(true);
+  // overlay only; inner component handles mic/cam/editor/transcript
   
   useEffect(() => {
     // Get interview parameters from location state
@@ -17,6 +19,19 @@ const InterviewSession = () => {
       navigate('/mock');
     }
   }, [location, navigate]);
+
+  useEffect(() => {
+    if (!isFullscreen) return;
+    // No key bindings here; inner component manages its own controls
+  }, [isFullscreen]);
+
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.classList.add('session-active');
+    } else {
+      document.body.classList.remove('session-active');
+    }
+  }, [isFullscreen]);
 
   const handleInterviewComplete = (interviewHistory) => {
     // In a real app, we would save the interview results to a database
@@ -45,6 +60,27 @@ const InterviewSession = () => {
     );
   }
 
+  if (isFullscreen && interviewParams) {
+    return (
+      <div className="fixed inset-0 z-[9999] bg-slate-950/90 backdrop-blur-lg text-slate-100">
+        <div className="h-screen w-screen p-2 sm:p-4">
+          <InterviewTwoPane
+            role={interviewParams.role}
+            mode={interviewParams.mode}
+            experience={interviewParams.experience}
+            candidateName={interviewParams.candidateName}
+            questionCount={interviewParams.questionCount}
+            timeDuration={interviewParams.timeDuration}
+            level={interviewParams.level}
+            email={interviewParams.email}
+            notes={interviewParams.notes}
+            company={interviewParams.company}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <InterviewLayout>
       <div className="px-6 py-8">
@@ -60,8 +96,8 @@ const InterviewSession = () => {
           </button>
         </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="grid gap-0 lg:grid-cols-1">
+        <div className="lg:col-span-1">
           <InterviewTwoPane 
             role={interviewParams.role} 
             mode={interviewParams.mode} 
@@ -73,40 +109,7 @@ const InterviewSession = () => {
             email={interviewParams.email}
             notes={interviewParams.notes}
           />
-        </div>
-        
-        <div className="p-4 bg-slate-900 border border-slate-800 rounded">
-          <h3 className="text-lg font-medium mb-3 text-slate-100">Interview Tips</h3>
-          
-          {interviewParams.mode === 'Technical' && (
-            <ul className="space-y-2 text-slate-300">
-              <li className="flex items-start gap-2"><span>💡</span> Explain your thought process clearly</li>
-              <li className="flex items-start gap-2"><span>💡</span> Consider time and space complexity</li>
-              <li className="flex items-start gap-2"><span>💡</span> Discuss alternative approaches</li>
-              <li className="flex items-start gap-2"><span>💡</span> Ask clarifying questions when needed</li>
-              <li className="flex items-start gap-2"><span>💡</span> Test your solution with examples</li>
-            </ul>
-          )}
-          
-          {interviewParams.mode === 'Behavioral' && (
-            <ul className="space-y-2 text-slate-300">
-              <li className="flex items-start gap-2"><span>💡</span> Use the STAR method (Situation, Task, Action, Result)</li>
-              <li className="flex items-start gap-2"><span>💡</span> Be specific with examples</li>
-              <li className="flex items-start gap-2"><span>💡</span> Quantify your achievements when possible</li>
-              <li className="flex items-start gap-2"><span>💡</span> Show self-awareness and growth mindset</li>
-              <li className="flex items-start gap-2"><span>💡</span> Connect your experiences to the role</li>
-            </ul>
-          )}
-          
-          {interviewParams.mode === 'System Design' && (
-            <ul className="space-y-2 text-slate-300">
-              <li className="flex items-start gap-2"><span>💡</span> Clarify requirements and constraints</li>
-              <li className="flex items-start gap-2"><span>💡</span> Start with a high-level design</li>
-              <li className="flex items-start gap-2"><span>💡</span> Discuss trade-offs in your approach</li>
-              <li className="flex items-start gap-2"><span>💡</span> Consider scalability and reliability</li>
-              <li className="flex items-start gap-2"><span>💡</span> Address potential bottlenecks</li>
-            </ul>
-          )}
+          {/* Fullscreen session auto-opens; manual trigger removed per spec */}
         </div>
       </div>
       </div>

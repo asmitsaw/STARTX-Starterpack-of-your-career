@@ -1,4 +1,6 @@
 // Collection of SVG icons for the application
+import aiInterviewIcon from '../images/ai interview page.ico';
+
 export const icons = {
   feed: (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 846.66 846.66" fill="currentColor" role="img" aria-label="Feed">
@@ -40,14 +42,7 @@ export const icons = {
     </svg>
   ),
   interview: (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-      <circle cx="8.5" cy="7" r="4" />
-      <path d="m18 11 4 4" />
-      <path d="m22 11-4 4" />
-      <path d="M12 11h4" />
-      <path d="M12 7h4" />
-    </svg>
+    <img src={aiInterviewIcon} alt="AI Interview" width="24" height="24" className="inline-block interview-icon" />
   ),
   profile: (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

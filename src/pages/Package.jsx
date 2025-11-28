@@ -6,7 +6,7 @@ export default function Package() {
   const plans = [
     {
       name: 'Starter',
-      price: '$0',
+      price: 'Rs.0',
       period: 'Forever',
       features: [
         'Personalized feed',
@@ -17,7 +17,7 @@ export default function Package() {
     },
     {
       name: 'Pro',
-      price: '$9',
+      price: 'Rs499',
       period: 'per month',
       features: [
         'Unlimited AI interviews',
@@ -30,7 +30,7 @@ export default function Package() {
     },
     {
       name: 'Elite',
-      price: '$29',
+      price: 'Rs.999',
       period: 'per month',
       features: [
         'Everything in Pro',

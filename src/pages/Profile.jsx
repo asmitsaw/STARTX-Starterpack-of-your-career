@@ -2,15 +2,18 @@ import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { useCurrentUser } from '../hooks/useCurrentUser.js'
 import Modal from '../components/Modal.jsx'
 import { useUser, useAuth } from '@clerk/clerk-react'
+import { useParams } from 'react-router-dom'
 import axios from 'axios'
 import { io } from 'socket.io-client'
 import { toast } from 'react-hot-toast'
 import { v4 as uuidv4 } from 'uuid'
 
 export default function Profile() {
+  const { userId: profileUserId } = useParams() // Get userId from URL
   const { profile, updateProfile, clearProfileOverrides } = useCurrentUser()
   const { user, isLoaded, isSignedIn } = useUser()
   const { signIn } = useAuth()
+  const [viewingProfile, setViewingProfile] = useState(null) // Profile being viewed
   const [isEditing, setIsEditing] = useState(false)
   const [draft, setDraft] = useState(null)
   const avatarInputRef = useRef(null)
@@ -30,11 +33,19 @@ export default function Profile() {
   const [showNotification, setShowNotification] = useState(false)
   const [notifications, setNotifications] = useState([])
   
+  // Posts state
+  const [posts, setPosts] = useState([])
+  const [loadingPosts, setLoadingPosts] = useState(false)
+  const [dbUserId, setDbUserId] = useState(null) // Store database user ID
+  
   // API base URL
   const API_BASE = import.meta?.env?.VITE_API_URL || "http://localhost:5173";
   
   // Determine if the signed-in user is viewing their own profile
-  const isOwnProfile = !!(user?.id && profile?.id && user.id === profile.id)
+  const isOwnProfile = !profileUserId || profileUserId === user?.id
+  
+  // Get the profile to display (either own or viewing)
+  const displayProfile = viewingProfile || profile
   // Initialize socket connection
   useEffect(() => {
     if (!user || !profile) return;
@@ -203,13 +214,19 @@ export default function Profile() {
     
     setIsLoadingConnections(true)
     try {
-      const response = await axios.get(`${API_BASE}/api/users/connections/${user.id}`)
-      setConnections(response.data.connections || [])
+      const response = await axios.get(`${API_BASE}/api/connections`, {
+        withCredentials: true
+      })
+      console.log('[Profile] Connections data:', response.data)
+      if (response.data && response.data.length > 0) {
+        console.log('[Profile] First connection object:', response.data[0])
+      }
+      setConnections(response.data || [])
       
       // Create a map of user IDs to connection status
       const statusMap = {}
-      response.data.connections.forEach(conn => {
-        statusMap[conn.id] = {
+      response.data.forEach(conn => {
+        statusMap[conn.connected_user_id] = {
           status: conn.status,
           direction: conn.direction
         }
@@ -217,7 +234,10 @@ export default function Profile() {
       setConnectionStatus(statusMap)
     } catch (error) {
       console.error('Error loading connections:', error)
-      toast.error('Failed to load connections')
+      // Don't show error toast if connections table doesn't exist yet
+      if (error.response?.data?.error !== 'connections_table_missing') {
+        toast.error('Failed to load connections')
+      }
     } finally {
       setIsLoadingConnections(false)
     }
@@ -230,21 +250,126 @@ export default function Profile() {
     }
   }, [profile, user])
   
+  // Fetch other user's profile if viewing someone else's profile
+  useEffect(() => {
+    if (profileUserId && profileUserId !== user?.id) {
+      // Fetch the other user's profile
+      const fetchUserProfile = async () => {
+        try {
+          const BACKEND_URL = 'http://localhost:5174'
+          const response = await axios.get(`${BACKEND_URL}/api/users/${profileUserId}`, {
+            withCredentials: true
+          })
+          console.log('[Profile] Fetched user profile:', response.data)
+          setViewingProfile(response.data)
+        } catch (error) {
+          console.error('Error fetching user profile:', error)
+          toast.error('Failed to load user profile')
+        }
+      }
+      fetchUserProfile()
+    } else {
+      setViewingProfile(null) // Viewing own profile
+    }
+  }, [profileUserId, user])
+  
+  // Fetch database user ID when viewing own profile
+  useEffect(() => {
+    const fetchDbUserId = async () => {
+      // First check localStorage
+      const storedDbUserId = localStorage.getItem('sx_db_user_id')
+      if (storedDbUserId) {
+        console.log('[Profile] Using stored DB user ID:', storedDbUserId)
+        setDbUserId(storedDbUserId)
+        return
+      }
+      
+      // If not in localStorage and viewing own profile, fetch from backend
+      if (!profileUserId && user) {
+        try {
+          const BACKEND_URL = 'http://localhost:5174'
+          // Fetch current user's feed to get their posts and extract DB ID
+          const response = await axios.get(`${BACKEND_URL}/api/posts/feed?limit=1`, {
+            withCredentials: true
+          })
+          if (response.data.items && response.data.items.length > 0) {
+            const firstPost = response.data.items[0]
+            if (firstPost.author_id) {
+              console.log('[Profile] Extracted DB user ID from own post:', firstPost.author_id)
+              setDbUserId(firstPost.author_id)
+              localStorage.setItem('sx_db_user_id', firstPost.author_id)
+            }
+          }
+        } catch (error) {
+          console.error('[Profile] Error fetching DB user ID:', error)
+        }
+      }
+    }
+    
+    if (!dbUserId && user) {
+      fetchDbUserId()
+    }
+  }, [dbUserId, profileUserId, user])
+  
+  // Fetch posts for the viewed user
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setLoadingPosts(true)
+      try {
+        const BACKEND_URL = 'http://localhost:5174'
+        
+        // Determine which user's posts to fetch
+        let targetUserId
+        if (viewingProfile?.id) {
+          // Viewing someone else's profile
+          targetUserId = viewingProfile.id
+          console.log('[Profile] Fetching posts for viewed user DB ID:', targetUserId)
+        } else if (dbUserId) {
+          // Viewing own profile - use extracted database ID
+          targetUserId = dbUserId
+          console.log('[Profile] Fetching own posts with extracted DB ID:', targetUserId)
+        } else if (profile?.id && profile.id.includes('-')) {
+          // Fallback: if profile.id looks like a UUID, use it
+          targetUserId = profile.id
+          console.log('[Profile] Fetching own posts with profile DB ID:', targetUserId)
+        }
+        
+        if (!targetUserId) {
+          console.log('[Profile] No user ID available yet, skipping fetch')
+          setLoadingPosts(false)
+          return
+        }
+        
+        // Always pass userId to get ONLY that user's posts (not connections)
+        const response = await axios.get(`${BACKEND_URL}/api/posts/feed?userId=${targetUserId}&limit=20`, {
+          withCredentials: true
+        })
+        console.log('[Profile] Fetched posts:', response.data)
+        setPosts(response.data.items || [])
+      } catch (error) {
+        console.error('Error fetching posts:', error)
+        console.error('Error details:', error.response?.data)
+        setPosts([])
+      } finally {
+        setLoadingPosts(false)
+      }
+    }
+    
+    if (user) {
+      fetchPosts()
+    }
+  }, [profileUserId, profile, viewingProfile, user, dbUserId])
+  
   // Send connection request
   const sendConnectionRequest = async (userId) => {
-    // Check if user is authenticated
-    if (!isSignedIn) {
-      // Redirect to sign-in if not authenticated
-      signIn();
-      return;
+    if (!user) {
+      toast.error('Please sign in to connect')
+      return
     }
     
     try {
-      await axios.post(`${API_BASE}/api/users/connections/${userId}`, { 
-        status: 'pending',
-        from: user.id,
-        to: userId,
-        fromName: user.fullName || user.firstName || 'User'
+      await axios.post(`${API_BASE}/api/connections/${userId}`, {}, {
+        withCredentials: true
       })
       
       // Show success notification
@@ -254,25 +379,12 @@ export default function Profile() {
       loadConnections()
       
       // Update search results to reflect new status
-      setSearchResults(prev => 
-        prev.map(u => 
-          u.id === userId 
-            ? { ...u, connection_status: 'pending' } 
-            : u
-        )
-      )
-      
-      // Emit socket event for real-time notification
-      if (socket) {
-        socket.emit('connection:request', {
-          from: user.id,
-          to: userId,
-          fromName: user.fullName || user.firstName || 'User'
-        });
-      }
+      setSearchResults(prev => prev.map(u => 
+        u.id === userId ? { ...u, connection_status: 'pending' } : u
+      ))
     } catch (error) {
       console.error('Error sending connection request:', error)
-      toast.error('Failed to send connection request. Please try again.');
+      toast.error(error.response?.data?.message || 'Failed to send connection request')
     }
   }
   
@@ -307,11 +419,11 @@ export default function Profile() {
   
   if (!isSignedIn) return (
     <div className="min-h-screen bg-slate-50 grid place-items-center">
-      <div className="text-slate-600">Please sign in to view your profile</div>
+      <div className="text-slate-600">Please sign in to view profiles</div>
     </div>
   )
   
-  if (!profile) return (
+  if (!displayProfile) return (
     <div className="min-h-screen bg-slate-50 grid place-items-center">
       <div className="text-slate-600">Loading profile...</div>
     </div>
@@ -410,11 +522,11 @@ export default function Profile() {
             <div className="-mt-16 mb-4">
               <div className="group w-28 h-28 rounded-full bg-white ring-4 ring-white shadow-md overflow-hidden relative -ml-2">
                 <div className="absolute inset-0 transition-transform duration-200 group-hover:scale-[1.03]">
-                  {(isEditing ? draft?.avatarUrl : (user?.imageUrl || profile.avatarUrl)) ? (
-                    <img src={isEditing ? draft?.avatarUrl : (user?.imageUrl || profile.avatarUrl)} alt="Avatar" className="w-full h-full object-cover" />
+                  {(isEditing ? draft?.avatarUrl : (isOwnProfile ? (user?.imageUrl || profile.avatarUrl) : displayProfile.avatar_url)) ? (
+                    <img src={isEditing ? draft?.avatarUrl : (isOwnProfile ? (user?.imageUrl || profile.avatarUrl) : displayProfile.avatar_url)} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full grid place-items-center text-3xl font-bold text-startx-700">
-                      {(user?.fullName || profile.name || "U").charAt(0)}
+                      {(isOwnProfile ? (user?.fullName || profile.name) : displayProfile.name || "U").charAt(0)}
                     </div>
                   )}
                 </div>
@@ -437,8 +549,8 @@ export default function Profile() {
                   </div>
                 ) : (
                   <>
-                    <h1 className="text-3xl font-bold text-slate-900">{user?.fullName || profile.name}</h1>
-                    <p className="text-lg text-slate-700">{user?.publicMetadata?.role || profile.title}</p>
+                    <h1 className="text-3xl font-bold text-slate-900">{isOwnProfile ? (user?.fullName || profile.name) : displayProfile.name}</h1>
+                    <p className="text-lg text-slate-700">{isOwnProfile ? (user?.publicMetadata?.role || profile.title) : displayProfile.headline}</p>
                   </>
                 )}
                 <div className="mt-2 text-sm text-slate-700 flex items-center gap-3 flex-wrap">
@@ -447,7 +559,7 @@ export default function Profile() {
                     {isEditing ? (
                       <input value={draft?.location || ''} onChange={(e) => setDraft({ ...draft, location: e.target.value })} className="input input-sm" placeholder="Location" />
                     ) : (
-                      <span>{user?.publicMetadata?.location || profile.location}</span>
+                      <span>{isOwnProfile ? (user?.publicMetadata?.location || profile.location) : 'India'}</span>
                     )}
                   </span>
                   <span className="inline-flex items-center gap-1">
@@ -455,7 +567,7 @@ export default function Profile() {
                     {isEditing ? (
                       <input type="number" value={draft?.connections ?? 0} onChange={(e) => setDraft({ ...draft, connections: Number(e.target.value || 0) })} className="input input-sm w-28" />
                     ) : (
-                      <span>{profile.connections}+ connections</span>
+                      <span>500+ connections</span>
                     )}
                   </span>
                 </div>
@@ -566,11 +678,126 @@ export default function Profile() {
                             <div className="text-sm text-slate-600">{conn.title || conn.headline}</div>
                           </div>
                         </div>
-                        <button className="btn-outline btn-sm">Message</button>
+                        <div className="flex gap-2">
+                          <button 
+                            className="btn-outline btn-sm"
+                            onClick={() => {
+                              console.log('[Profile] View Profile clicked, conn:', conn)
+                              if (conn.user_id) {
+                                window.location.href = `/profile/${conn.user_id}`
+                              } else {
+                                console.error('[Profile] No user_id in connection:', conn)
+                                alert('Cannot view profile: user ID not found')
+                              }
+                            }}
+                          >
+                            View Profile
+                          </button>
+                          <button 
+                            className="btn-gradient btn-sm"
+                            onClick={() => {
+                              if (conn.user_id) {
+                                window.location.href = `/message?userId=${conn.user_id}`
+                              }
+                            }}
+                          >
+                            Message
+                          </button>
+                        </div>
                       </li>
                     ))}
                 </ul>
               </div>
+            </div>
+          )}
+        </div>
+        
+        {/* Posts Section */}
+        <div className="card p-6 mt-6">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Posts</h2>
+          
+          {loadingPosts ? (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-startx-600 mx-auto mb-4"></div>
+              <p className="text-slate-500">Loading posts...</p>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="text-center py-12">
+              <svg className="w-16 h-16 mx-auto mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+              </svg>
+              <p className="text-slate-500 text-lg">No posts yet</p>
+              <p className="text-slate-400 text-sm mt-2">{isOwnProfile ? 'Share your first post!' : 'This user hasn\'t posted anything yet.'}</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {posts.map((post) => (
+                <div key={post.id} className="border border-slate-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                  {/* Post Header */}
+                  <div className="flex items-start gap-3 mb-4">
+                    {post.avatar_url ? (
+                      <img src={post.avatar_url} alt={post.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-slate-100" />
+                    ) : (
+                      <div className="w-12 h-12 bg-startx-600 rounded-full flex items-center justify-center text-white font-medium shadow-sm">
+                        {(post.name || 'U').charAt(0)}
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <div className="font-semibold text-slate-900">{post.name || 'User'}</div>
+                      <div className="text-sm text-slate-600">{post.headline || ''}</div>
+                      <div className="text-xs text-slate-500 mt-1">
+                        {new Date(post.created_at).toLocaleDateString('en-US', { 
+                          year: 'numeric', 
+                          month: 'short', 
+                          day: 'numeric' 
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Post Content */}
+                  {post.content && (
+                    <p className="text-slate-800 mb-4 whitespace-pre-wrap">{post.content}</p>
+                  )}
+                  
+                  {/* Post Media */}
+                  {post.media_url && (
+                    <div className="mb-4 rounded-lg overflow-hidden">
+                      {post.media_url.match(/\.(mp4|webm|ogg)$/i) ? (
+                        <video className="w-full" controls src={post.media_url.startsWith('/') ? `http://localhost:5174${post.media_url}` : post.media_url} />
+                      ) : (
+                        <img 
+                          className="w-full h-auto object-contain max-h-96" 
+                          src={post.media_url.startsWith('/') ? `http://localhost:5174${post.media_url}` : post.media_url} 
+                          alt="Post media"
+                        />
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Post Stats */}
+                  <div className="flex items-center gap-6 pt-3 border-t border-slate-100 text-sm text-slate-600">
+                    <div className="flex items-center gap-1">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
+                      </svg>
+                      <span>{post.likes_count || 0} likes</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      <span>{post.comments_count || 0} comments</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                      </svg>
+                      <span>{post.shares_count || 0} shares</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -686,9 +913,9 @@ export default function Profile() {
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-slate-900">Education</h2>
               </div>
-              <div className="mt-4 space-y-4 timeline">
+              <div className="mt-4 space-y-4">
                 {(isEditing ? draft?.education : profile.education).map((ed, i) => (
-                  <div key={i} className="timeline-item">
+                  <div key={i} className="">
                     {isEditing ? (
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <input value={ed.school} onChange={(e) => setDraft((d) => ({ ...d, education: d.education.map((x, idx) => idx === i ? { ...x, school: e.target.value } : x) }))} className="input" placeholder="School" />

@@ -11,13 +11,24 @@
     "db:migrations": "node ./scripts/run-migrations.js",
     "db:test": "node ./scripts/test-connection.js",
     "db:setup": "node ./scripts/setup-db.js",
+    "migrate:messenger": "node ./server/run-migration.js",
+    "update:messenger": "node ./server/update-conversations.js",
+    "migrate:connections": "node ./server/migrate-connections.js",
+    "create:connections": "node ./server/create-connections-table.js",
+    "create:messages": "node ./server/create-messages-table.js",
+    "sync:users": "node ./server/sync-all-users.js",
+    "test:messenger": "node ./server/test-messenger.js",
     "api": "node ./server/index.js",
     "test": "vitest"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.47.0",
+    "@google/generative-ai": "^0.21.0",
     "@imagekit/javascript": "^5.1.0",
     "@imagekit/react": "^5.0.1",
+    "@stripe/react-stripe-js": "^5.3.0",
+    "@stripe/stripe-js": "^8.2.0",
+    "@vapi-ai/web": "^2.4.0",
     "axios": "^1.12.2",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
@@ -30,23 +41,27 @@
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^3.0.1",
     "lucide-react": "^0.544.0",
+    "mathjs": "^14.8.2",
     "multer": "^2.0.2",
     "newsapi": "^2.4.1",
     "ogl": "^1.0.11",
     "pg": "^8.16.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^6.30.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "unsplash-js": "^7.0.20"
+    "stripe": "^19.1.0",
+    "unsplash-js": "^7.0.20",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.41",
     "tailwindcss": "^3.4.10",
-    "vite": "^5.4.3"
+    "vite": "^7.1.9"
   },
   "overrides": {}
 }

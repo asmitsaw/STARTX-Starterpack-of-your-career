@@ -6,14 +6,22 @@ import { query } from '../db.js'
  */
 export async function clerkAuth(req, res, next) {
   try {
-    // Get token from cookie (set by Clerk)
-    const token = req.cookies?.token || req.cookies?.__session
+    // Get token from Authorization header or cookie
+    const authHeader = req.headers.authorization;
+    let token = null;
     
-    console.log('ClerkAuth - Cookies:', Object.keys(req.cookies || {}));
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7); // Remove 'Bearer ' prefix
+      console.log('ClerkAuth - Token from Authorization header');
+    } else {
+      token = req.cookies?.token || req.cookies?.__session;
+      console.log('ClerkAuth - Token from cookies');
+    }
+    
     console.log('ClerkAuth - Token found:', !!token);
     
     if (!token) {
-      console.error('ClerkAuth - No token found in cookies');
+      console.error('ClerkAuth - No token found in Authorization header or cookies');
       return res.status(401).json({ error: 'unauthorized', message: 'No authentication token found' })
     }
 
@@ -37,13 +45,37 @@ export async function clerkAuth(req, res, next) {
     
     // Extract user info from Clerk token
     const userId = payload.sub || payload.user_id || payload.id
-    const email = payload.email || payload.email_address
-    const name = payload.name || payload.full_name || payload.first_name || 'User'
     
     console.log('ClerkAuth - Extracted userId:', userId);
-    console.log('ClerkAuth - Extracted email:', email);
-    console.log('ClerkAuth - Extracted name:', name);
     console.log('ClerkAuth - Full payload:', JSON.stringify(payload, null, 2));
+    
+    // Fetch full user data from Clerk API
+    let email = null
+    let name = 'User'
+    let avatarUrl = null
+    
+    try {
+      const clerkResponse = await fetch(`https://api.clerk.com/v1/users/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.CLERK_SECRET_KEY}`
+        }
+      })
+      
+      if (clerkResponse.ok) {
+        const clerkUser = await clerkResponse.json()
+        email = clerkUser.email_addresses?.[0]?.email_address || clerkUser.primary_email_address_id
+        name = `${clerkUser.first_name || ''} ${clerkUser.last_name || ''}`.trim() || clerkUser.username || 'User'
+        avatarUrl = clerkUser.image_url || clerkUser.profile_image_url
+        
+        console.log('ClerkAuth - Fetched from Clerk API:', { name, email, avatarUrl })
+      } else {
+        console.warn('ClerkAuth - Failed to fetch from Clerk API, using defaults')
+      }
+    } catch (fetchError) {
+      console.warn('ClerkAuth - Error fetching from Clerk API:', fetchError.message)
+    }
+    
+    console.log('ClerkAuth - Final extracted data:', { userId, email, name, avatarUrl });
     
     if (!userId) {
       console.error('ClerkAuth - No user ID found in token payload');
@@ -51,34 +83,30 @@ export async function clerkAuth(req, res, next) {
     }
 
     // Check if user exists in database by clerk_id
-    let userResult = await query('SELECT id, clerk_id, email, name FROM users WHERE clerk_id = $1', [userId])
+    let userResult = await query('SELECT id, clerk_id, email, name, avatar_url FROM users WHERE clerk_id = $1', [userId])
     
     console.log('ClerkAuth - User query result:', userResult.rows.length, 'rows');
     
-    // If user doesn't exist, create them
-    if (userResult.rows.length === 0) {
-      console.log('ClerkAuth - Creating new user from Clerk:', userId, email, name)
+    // Create or update user with latest Clerk data
+    try {
+      const insertResult = await query(
+        `INSERT INTO users (clerk_id, email, name, avatar_url, created_at) 
+         VALUES ($1, $2, $3, $4, NOW()) 
+         ON CONFLICT (clerk_id) DO UPDATE 
+         SET email = EXCLUDED.email, name = EXCLUDED.name, avatar_url = EXCLUDED.avatar_url
+         RETURNING id, clerk_id, email, name, avatar_url`,
+        [userId, email || `user_${userId}@startx.com`, name, avatarUrl]
+      )
       
-      try {
-        const insertResult = await query(
-          `INSERT INTO users (clerk_id, email, name, created_at) 
-           VALUES ($1, $2, $3, NOW()) 
-           ON CONFLICT (clerk_id) DO UPDATE 
-           SET email = EXCLUDED.email, name = EXCLUDED.name
-           RETURNING id, clerk_id, email, name`,
-          [userId, email || `user_${userId}@startx.com`, name]
-        )
-        
-        console.log('ClerkAuth - User created/updated:', insertResult.rows[0]);
-        
-        // Fetch the newly created user
-        userResult = await query('SELECT id, clerk_id, email, name FROM users WHERE clerk_id = $1', [userId])
-        console.log('ClerkAuth - Fetched user after creation:', userResult.rows[0]);
-      } catch (err) {
-        console.error('ClerkAuth - Error creating user:', err)
-        console.error('ClerkAuth - Error details:', err.message, err.stack)
-        return res.status(500).json({ error: 'user_creation_failed', message: 'Failed to create user account: ' + err.message })
-      }
+      console.log('ClerkAuth - User created/updated:', insertResult.rows[0]);
+      
+      // Fetch the user
+      userResult = await query('SELECT id, clerk_id, email, name, avatar_url FROM users WHERE clerk_id = $1', [userId])
+      console.log('ClerkAuth - Fetched user:', userResult.rows[0]);
+    } catch (err) {
+      console.error('ClerkAuth - Error creating/updating user:', err)
+      console.error('ClerkAuth - Error details:', err.message, err.stack)
+      return res.status(500).json({ error: 'user_sync_failed', message: 'Failed to sync user account: ' + err.message })
     }
     
     if (userResult.rows.length === 0) {
@@ -86,10 +114,11 @@ export async function clerkAuth(req, res, next) {
       return res.status(500).json({ error: 'user_not_found', message: 'User could not be created or found' })
     }
     
-    // Attach user to request with clerk_id as the primary identifier
+    // Attach user to request with both database UUID and clerk_id
     req.user = {
       ...userResult.rows[0],
-      id: userResult.rows[0].clerk_id // Use clerk_id as the primary id for consistency
+      id: userResult.rows[0].id, // Use database UUID for foreign key references
+      clerk_id: userResult.rows[0].clerk_id // Keep clerk_id for reference
     }
     
     console.log('ClerkAuth - Final req.user:', req.user);
@@ -134,7 +163,8 @@ export async function optionalClerkAuth(req, res, next) {
       if (userResult.rows.length > 0) {
         req.user = {
           ...userResult.rows[0],
-          id: userResult.rows[0].clerk_id
+          id: userResult.rows[0].id, // Use database UUID
+          clerk_id: userResult.rows[0].clerk_id
         }
       }
     }

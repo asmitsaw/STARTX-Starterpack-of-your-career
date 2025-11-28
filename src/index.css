@@ -235,4 +235,20 @@ body, html {
   @apply accent-startx-600;
 }
 
+/* Interview icon color handling */
+/* Default: white in header */
+.interview-icon {
+  filter: brightness(0) invert(1);
+}
+
+/* Blue in Quick Actions sidebar */
+.text-startx-600 .interview-icon {
+  filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(187deg) brightness(97%) contrast(101%);
+}
+
+/* Blue when active in header */
+.text-startx-400 .interview-icon {
+  filter: brightness(0) saturate(100%) invert(42%) sepia(93%) saturate(1352%) hue-rotate(187deg) brightness(97%) contrast(101%);
+}
+
 

@@ -291,6 +291,7 @@ const generateCertificateCode = () => {
 
 // Certificate Component
 function Certificate({ courseName, userName, date, onClose, certificateCode }) {
+  const { user } = useAuth()
   const certificateRef = useRef(null)
   const [isDownloading, setIsDownloading] = useState(false)
   const [isSharing, setIsSharing] = useState(false)
@@ -349,6 +350,11 @@ function Certificate({ courseName, userName, date, onClose, certificateCode }) {
 
     setIsAddingToProfile(true)
     try {
+      // Check if user is authenticated and has getToken method
+      if (!user || !user.getToken) {
+        throw new Error('User not authenticated or authentication not loaded. Please sign in and try again.')
+      }
+
       // Extract skills from course name
       const skillsMap = {
         'Figma': ['Figma', 'UI/UX Design', 'Prototyping', 'Design Systems'],
@@ -377,11 +383,17 @@ function Certificate({ courseName, userName, date, onClose, certificateCode }) {
       const highlightText = `🎓 Completed "${courseName}" certification from StartX\n📜 Certificate ID: ${certificateCode}\n📅 Issued: ${date}\n\n✨ Successfully mastered ${skills.slice(0, 3).join(', ')} and earned industry-recognized certification.`
 
       // Update profile with skills and highlight
-      const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5174'
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5174'
+
+      // Get Clerk session token
+      const sessionToken = await user.getToken();
+      console.log('Session token obtained:', !!sessionToken);
+
       const response = await fetch(`${API_BASE}/api/users/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`,
         },
         credentials: 'include',
         body: JSON.stringify({
@@ -397,15 +409,29 @@ function Certificate({ courseName, userName, date, onClose, certificateCode }) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to update profile')
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('Profile update failed:', response.status, errorData);
+        throw new Error(errorData.message || errorData.error || 'Failed to update profile')
       }
+
+      const result = await response.json();
+      console.log('Profile updated successfully:', result);
 
       setIsAddingToProfile(false)
       alert(`✅ Certificate added to your profile!\n\n📚 Skills added: ${skills.join(', ')}\n🌟 Highlight added with certificate details`)
     } catch (error) {
       console.error('Error adding to profile:', error)
       setIsAddingToProfile(false)
-      alert('Failed to add certificate to profile. Please try again.')
+
+      // Provide more specific error messages based on the error
+      let errorMessage = error.message
+      if (error.message.includes('not authenticated') || error.message.includes('not loaded')) {
+        errorMessage = 'Please sign in to add certificates to your profile.'
+      } else if (error.message.includes('Failed to fetch') || error.message.includes('network')) {
+        errorMessage = 'Network error. Please check your connection and try again.'
+      }
+
+      alert(`Failed to add certificate to profile: ${errorMessage}`)
     }
   }
 
@@ -634,7 +660,7 @@ function Certificate({ courseName, userName, date, onClose, certificateCode }) {
         <div className="flex flex-col sm:flex-row justify-center gap-3 mt-8">
           <button
             onClick={addToProfile}
-            disabled={isAddingToProfile}
+            disabled={isAddingToProfile || !user || !user.getToken}
             className="px-6 py-3.5 bg-gradient-to-r from-purple-600 to-indigo-700 text-white rounded-xl hover:from-purple-700 hover:to-indigo-800 transition font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
             <span className="flex items-center justify-center gap-2">

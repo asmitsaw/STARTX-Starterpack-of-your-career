@@ -24,19 +24,27 @@ const upload = multer({ storage })
 // Get current user profile
 router.get('/me', clerkAuth, async (req, res) => {
   try {
+    console.log('[Users/me] Fetching profile for user ID:', req.user?.id)
+    console.log('[Users/me] Full req.user:', req.user)
+    
     const { rows } = await query(
-      'SELECT id, clerk_id, email, name, headline, bio, skills, highlights FROM users WHERE clerk_id = $1',
+      'SELECT id, clerk_id, email, name, avatar_url, headline FROM users WHERE id = $1',
       [req.user.id]
     )
     
+    console.log('[Users/me] Query returned', rows.length, 'rows')
+    
     if (rows.length === 0) {
+      console.log('[Users/me] User not found in database')
       return res.status(404).json({ error: 'User not found' })
     }
     
+    console.log('[Users/me] Returning user:', rows[0])
     res.json(rows[0])
   } catch (error) {
-    console.error('Error fetching user profile:', error)
-    res.status(500).json({ error: 'Server error' })
+    console.error('[Users/me] Error fetching user profile:', error)
+    console.error('[Users/me] Error details:', error.message, error.stack)
+    res.status(500).json({ error: 'Server error', details: error.message })
   }
 })
 
@@ -97,38 +105,38 @@ router.put('/me', clerkAuth, async (req, res) => {
   try {
     const { skills, highlights, addCertification } = req.body
     const userId = req.user.id
-    
+
     // Get current user data
     const currentUser = await query(
       'SELECT skills, highlights FROM users WHERE clerk_id = $1',
       [userId]
     )
-    
+
     if (currentUser.rows.length === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
-    
+
     // Merge new skills with existing ones
     let updatedSkills = currentUser.rows[0].skills || []
     if (skills && Array.isArray(skills)) {
-      updatedSkills = [...new Set([...updatedSkills, ...skills])]
+      updatedSkills = [...new Set([...updatedSkills, ...skills])];
     }
-    
+
     // Merge new highlights with existing ones
-    let updatedHighlights = currentUser.rows[0].highlights || []
+    let updatedHighlights = currentUser.rows[0].highlights || [];
     if (highlights && Array.isArray(highlights)) {
-      updatedHighlights = [...highlights, ...updatedHighlights]
+      updatedHighlights = [...highlights, ...updatedHighlights];
     }
-    
+
     // Update user profile
     const { rows } = await query(
-      `UPDATE users 
-       SET skills = $1, highlights = $2, updated_at = NOW()
+      `UPDATE users
+       SET skills = $1, highlights = $2
        WHERE clerk_id = $3
-       RETURNING id, clerk_id, email, name, headline, bio, skills, highlights`,
+       RETURNING id, clerk_id, email, name, headline, skills, highlights`,
       [updatedSkills, updatedHighlights, userId]
     )
-    
+
     res.json({ success: true, user: rows[0] })
   } catch (error) {
     console.error('Error updating user profile:', error)
@@ -161,6 +169,32 @@ async function updateConnectionCounts(userId) {
     return 0
   }
 }
+
+// Get all connections for current user
+router.get('/connections', clerkAuth, async (req, res) => {
+  try {
+    const userId = req.user.id
+    
+    const { rows } = await query(
+      `SELECT c.*, u.name, u.headline, u.avatar_url, u.id as connected_user_id
+       FROM connections c
+       JOIN users u ON (
+         CASE 
+           WHEN c.user_id = $1 THEN u.id = c.connected_user_id
+           ELSE u.id = c.user_id
+         END
+       )
+       WHERE (c.user_id = $1 OR c.connected_user_id = $1)
+       ORDER BY c.created_at DESC`,
+      [userId]
+    )
+    
+    return res.json(rows)
+  } catch (error) {
+    console.error('Error fetching connections:', error)
+    return res.status(500).json({ error: 'Server error' })
+  }
+})
 
 // Get connection status with a specific user
 router.get('/connections/:userId/status', clerkAuth, async (req, res) => {
@@ -313,20 +347,44 @@ router.put('/avatar', clerkAuth, upload.single('avatar'), async (req, res, next)
     // Update user's avatar URL
     const avatarUrl = `/uploads/${file.filename}`
     const { rows } = await query(
-      `UPDATE users SET avatar_url = $1, updated_at = NOW() 
-       WHERE clerk_id = $2 
-       RETURNING id, clerk_id, email, name, headline, bio, avatar_url`,
+      `UPDATE users SET avatar_url = $1, updated_at = NOW()
+       WHERE clerk_id = $2
+       RETURNING id, clerk_id, email, name, headline, avatar_url`,
       [avatarUrl, userId]
     )
     
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User not found' })
     }
-    
+
     res.json({ success: true, user: rows[0] })
   } catch (error) {
     console.error('Error updating avatar:', error)
     res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// Get specific user profile by ID (must be AFTER other routes to avoid conflicts)
+router.get('/:userId', clerkAuth, async (req, res) => {
+  try {
+    const { userId } = req.params
+    console.log('[Users] Fetching user profile for:', userId)
+    
+    const { rows } = await query(
+      'SELECT id, clerk_id, email, name, avatar_url, headline FROM users WHERE id = $1',
+      [userId]
+    )
+    
+    if (rows.length === 0) {
+      console.log('[Users] User not found:', userId)
+      return res.status(404).json({ error: 'User not found' })
+    }
+    
+    console.log('[Users] Found user:', rows[0].name)
+    res.json(rows[0])
+  } catch (err) {
+    console.error('[Users] Error fetching user profile:', err)
+    res.status(500).json({ error: 'Failed to fetch user profile', details: err.message })
   }
 })
 

@@ -1,12 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
 import { io } from 'socket.io-client'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext.jsx'
+import { useUser } from '@clerk/clerk-react'
+import axios from 'axios'
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5174'
 
 export default function Message() {
-  const { currentUser, token } = useAuth()
+  const { user, isLoaded } = useUser()
   const [conversations, setConversations] = useState([])
   const [activeConversationId, setActiveConversationId] = useState(null)
   const [messages, setMessages] = useState([])
@@ -14,14 +15,17 @@ export default function Message() {
   const [isSending, setIsSending] = useState(false)
   const [query, setQuery] = useState('')
   const [showNewChatModal, setShowNewChatModal] = useState(false)
-  const [showGroupModal, setShowGroupModal] = useState(false)
+  const [showUserSearch, setShowUserSearch] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [groupName, setGroupName] = useState('')
-  const [memberName, setMemberName] = useState('')
-  const [groupMembers, setGroupMembers] = useState([])
+  const [typingUsers, setTypingUsers] = useState(new Set())
+  const [onlineUsers, setOnlineUsers] = useState(new Set())
+  const [isTyping, setIsTyping] = useState(false)
   const socketRef = useRef(null)
   const navigate = useNavigate()
   const endRef = useRef(null)
+  const typingTimeoutRef = useRef(null)
 
   // Demo conversations with proper structure
   const demoConversations = [
@@ -154,8 +158,8 @@ export default function Message() {
       const optimistic = {
         id: `local-${Date.now()}`,
         conversation_id: activeConversationId,
-        sender_id: currentUser?.id || -1,
-        sender_name: currentUser?.name || 'You',
+        sender_id: user?.id || -1,
+        sender_name: user?.fullName || user?.username || 'You',
         text,
         created_at: new Date().toISOString(),
         _optimistic: true
@@ -354,27 +358,46 @@ export default function Message() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
               {messages.map(msg => (
-                <div key={msg.id} className={`flex ${msg.sender_id === currentUser?.id ? 'justify-end' : 'justify-start'}`}>
-                  {msg.sender_id !== currentUser?.id && (
+                <div key={msg.id} className={`flex ${msg.sender_id === user?.id ? 'justify-end' : 'justify-start'}`}>
+                  {msg.sender_id !== user?.id && (
                     <div className="mr-2">
                       <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-sm font-semibold">
                         {msg.sender_name?.[0] || 'U'}
                       </div>
                     </div>
                   )}
-                  <div className={`max-w-xs lg:max-w-md ${msg.sender_id === currentUser?.id ? 'ml-auto' : ''}`}>
-                    {msg.sender_id !== currentUser?.id && (
+                  <div className={`max-w-xs lg:max-w-md ${msg.sender_id === user?.id ? 'ml-auto' : ''}`}>
+                    {msg.sender_id !== user?.id && (
                       <div className="text-sm text-blue-400 mb-1">{msg.sender_name}</div>
                     )}
                     <div className={`rounded-2xl px-4 py-2 ${
-                      msg.sender_id === currentUser?.id 
+                      msg.sender_id === user?.id 
                         ? 'bg-blue-600 text-white' 
                         : 'bg-gray-700 text-white'
                     } ${msg._error ? 'ring-2 ring-red-400' : ''}`}>
                       {msg.text}
                     </div>
-                    <div className="text-xs text-gray-400 mt-1">
+                    <div className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {msg.sender_id === user?.id && (
+                        <span className="inline-flex items-center">
+                          {msg.delivery_status === 'read' ? (
+                            <svg className="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13l4 4L23 7" />
+                            </svg>
+                          ) : msg.delivery_status === 'delivered' ? (
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13l4 4L23 7" />
+                            </svg>
+                          ) : (
+                            <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          )}
+                        </span>
+                      )}
         </div>
               </div>
             </div>

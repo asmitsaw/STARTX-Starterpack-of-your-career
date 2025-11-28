@@ -54,12 +54,13 @@ export function useCurrentUser() {
       if (!isLoaded || !user) return
       setIsFetching(true)
       try {
-        const res = await apiFetch('/api/users/me/profile')
+        const res = await apiFetch('/api/users/me')
         if (!res.ok) throw new Error('Failed to fetch profile')
         const data = await res.json()
         if (!cancelled) setBackendProfile(data)
       } catch (e) {
         if (!cancelled) setError(e)
+        console.error('[useCurrentUser] Error fetching profile:', e)
       } finally {
         if (!cancelled) setIsFetching(false)
       }
@@ -132,7 +133,7 @@ export function useCurrentUser() {
     if (!user?.id) return
     // Persist to backend first; fall back to overrides if it fails
     try {
-      const res = await apiFetch('/api/users/me/profile', {
+      const res = await apiFetch('/api/users/me', {
         method: 'PUT',
         body: JSON.stringify(partial || {}),
       })
@@ -143,6 +144,7 @@ export function useCurrentUser() {
     } catch (e) {
       // Non-fatal; still apply local overrides
       setError(e)
+      console.error('[useCurrentUser] Error updating profile:', e)
     }
 
     const all = readOverrides()

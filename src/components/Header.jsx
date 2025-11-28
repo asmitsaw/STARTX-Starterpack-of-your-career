@@ -21,7 +21,7 @@ export default function Header() {
   const { user } = useUser()
   const { isDark, toggleTheme } = useThemeMode()
   const navLinkClass = ({ isActive }) =>
-    `${isActive ? 'text-startx-400' : 'text-slate-300 hover:text-white'} transition-colors duration-300`;
+    `${isActive ? 'text-startx-400' : 'text-white hover:text-startx-300'} transition-colors duration-300`;
 
   const location = useLocation()
   const [isScrolled, setIsScrolled] = useState(false)
@@ -34,11 +34,30 @@ export default function Header() {
   const [searchError, setSearchError] = useState(null)
   const [isSearchExpanded, setIsSearchExpanded] = useState(false)
   
+  // Unread messages count
+  const [unreadCount, setUnreadCount] = useState(0)
+  
   // API base URL
   const API_BASE = import.meta?.env?.VITE_API_URL || "http://localhost:5174";
   
-  // Search users function
-  const searchUsers = async (query) => {
+  // Website features/pages for search
+  const websiteFeatures = [
+    { id: 'home', name: 'Home', path: '/', icon: icons.home, description: 'Main landing page' },
+    { id: 'feed', name: 'Job Feed', path: '/feed', icon: icons.feed, description: 'Browse job opportunities' },
+    { id: 'news', name: 'News', path: '/news', icon: icons.news, description: 'Latest tech news and updates' },
+    { id: 'interview-dashboard', name: 'Interview Dashboard', path: '/interview-dashboard', icon: icons.interview, description: 'View your interview statistics' },
+    { id: 'new-interview', name: 'New Interview', path: '/new-interview', icon: icons.interview, description: 'Start a new AI interview' },
+    { id: 'interview-analytics', name: 'Interview Analytics', path: '/interview-analytics', icon: icons.interview, description: 'Analyze your interview performance' },
+    { id: 'interview-history', name: 'Interview History', path: '/interview-history', icon: icons.interview, description: 'View past interviews' },
+    { id: 'pitch', name: 'Pitch', path: '/pitch', icon: icons.pitch, description: 'Create and share your pitch' },
+    { id: 'learning', name: 'Learning', path: '/learning', icon: icons.learning, description: 'Educational resources and courses' },
+    { id: 'profile', name: 'Profile', path: '/profile', icon: icons.profile, description: 'Your personal profile' },
+    { id: 'message', name: 'Messenger', path: '/message', icon: icons.message, description: 'Chat with connections' },
+    { id: 'premium', name: 'Go Premium', path: '/premium', icon: icons.premium, description: 'Upgrade to premium features' },
+  ];
+  
+  // Search features function
+  const searchFeatures = (query) => {
     if (!query.trim()) {
       setSearchResults([])
       setSearchError(null)
@@ -49,49 +68,17 @@ export default function Header() {
     setSearchError(null)
     
     try {
-      // Add a timeout to the request to handle slow responses
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-      
-      const response = await axios.get(
-        `${API_BASE}/api/users/search?q=${encodeURIComponent(query)}`,
-        { signal: controller.signal }
+      const lowerQuery = query.toLowerCase();
+      const results = websiteFeatures.filter(feature => 
+        feature.name.toLowerCase().includes(lowerQuery) ||
+        feature.description.toLowerCase().includes(lowerQuery) ||
+        feature.id.toLowerCase().includes(lowerQuery)
       );
       
-      clearTimeout(timeoutId);
-      
-      if (response.data && response.data.users) {
-        setSearchResults(response.data.users || []);
-      } else {
-        throw new Error('Invalid response format');
-      }
+      setSearchResults(results);
     } catch (error) {
-      console.error('Error searching users:', error);
-      
-      if (error.name === 'AbortError') {
-        setSearchError('Request timed out. Please try again.');
-      } else if (error.response) {
-        // Server responded with an error status
-        const status = error.response.status;
-        let errorMessage = 'Server error occurred';
-        
-        if (status === 404) {
-          errorMessage = 'Search service not found';
-        } else if (status === 401 || status === 403) {
-          errorMessage = 'Not authorized to search users';
-        } else if (status >= 500) {
-          errorMessage = 'Server is currently unavailable';
-        }
-        
-        setSearchError(errorMessage);
-      } else if (error.request) {
-        // Request was made but no response received
-        setSearchError('No response from server. Please check your connection.');
-      } else {
-        // Something else caused the error
-        setSearchError(error.message || 'Unknown error occurred');
-      }
-      
+      console.error('Error searching features:', error);
+      setSearchError('Error searching. Please try again.');
       setSearchResults([]);
     } finally {
       setIsSearching(false);
@@ -102,12 +89,32 @@ export default function Header() {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (searchQuery) {
-        searchUsers(searchQuery)
+        searchFeatures(searchQuery)
       }
     }, 300)
     
     return () => clearTimeout(timer)
   }, [searchQuery])
+  
+  // Fetch unread messages count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (!user) return
+      try {
+        const { data } = await axios.get(`${API_BASE}/api/messages/unread-count`, {
+          withCredentials: true
+        })
+        setUnreadCount(data.unreadCount || 0)
+      } catch (error) {
+        console.error('Error fetching unread count:', error)
+      }
+    }
+    
+    fetchUnreadCount()
+    // Poll every 5 seconds for new messages
+    const interval = setInterval(fetchUnreadCount, 5000)
+    return () => clearInterval(interval)
+  }, [user, API_BASE])
   
   // Close search results when clicking outside
   useEffect(() => {
@@ -145,7 +152,7 @@ export default function Header() {
           {/* Key the logo by pathname so the red bar animation re-triggers on navigation */}
           <Logo key={location.pathname} className="h-10 w-auto md:h-12" />
         </Link>
-        <nav className="hidden gap-8 text-sm md:flex">
+        <nav className="hidden gap-4 text-sm md:flex flex-shrink">
           <NavLink to="/" end className={navLinkClass}>
             <div className="group relative flex items-center gap-2 rounded-md px-2 py-1 transition-all duration-300 ease-out hover:bg-white/5">
               <span className="text-current">{icons.home}</span>
@@ -238,7 +245,7 @@ export default function Header() {
               <div className={`overflow-hidden transition-all duration-300 ease-in-out ${isSearchExpanded ? 'w-52 opacity-100' : 'w-0 opacity-0'}`}>
                 <input
                   type="text"
-                  placeholder="Search users..."
+                  placeholder="Search features..."
                   className="w-full h-9 px-4 py-2 rounded-l-full bg-white/10 text-white placeholder-white/60 border-y border-l border-white/20 focus:outline-none focus:border-startx-400/50 focus:ring-1 focus:ring-startx-400/50"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -282,7 +289,7 @@ export default function Header() {
                     <div className="flex justify-center gap-2">
                       <button 
                         className="px-4 py-1.5 bg-startx-500 text-white text-sm rounded-md hover:bg-startx-600 transition-colors"
-                        onClick={() => searchUsers(searchQuery)}
+                        onClick={() => searchFeatures(searchQuery)}
                       >
                         Try Again
                       </button>
@@ -298,28 +305,26 @@ export default function Header() {
                     </div>
                   </div>) : searchResults.length === 0 && searchQuery.trim() !== '' && !isSearching ? (
                   <div className="p-4 text-center text-white/70">
-                    No users found matching "{searchQuery}"
+                    No features found matching "{searchQuery}"
                   </div>
                 ) : searchResults.length > 0 ? (
-                  searchResults.map(user => (
+                  searchResults.map(feature => (
                     <Link 
-                      key={user.id} 
-                      to={`/profile/${user.id}`}
+                      key={feature.id} 
+                      to={feature.path}
                       className="flex items-center gap-3 p-3 hover:bg-white/5 transition-colors"
-                      onClick={() => setShowSearchResults(false)}
+                      onClick={() => {
+                        setShowSearchResults(false);
+                        setIsSearchExpanded(false);
+                        setSearchQuery('');
+                      }}
                     >
-                      <div className="w-10 h-10 rounded-full bg-startx-100 overflow-hidden">
-                        {user.avatar_url ? (
-                          <img src={user.avatar_url} alt={user.name} className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full grid place-items-center text-lg font-bold text-startx-700">
-                            {user.name?.charAt(0) || '?'}
-                          </div>
-                        )}
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-startx-400 to-teal-500 flex items-center justify-center text-white">
+                        {feature.icon}
                       </div>
-                      <div>
-                        <div className="font-medium text-white">{user.name}</div>
-                        <div className="text-sm text-white/60">{user.title}</div>
+                      <div className="flex-1">
+                        <div className="font-medium text-white">{feature.name}</div>
+                        <div className="text-sm text-white/60">{feature.description}</div>
                       </div>
                     </Link>
                   ))
@@ -328,11 +333,15 @@ export default function Header() {
             )}
           </div>
           
-          {/* Notifications button (keeping this in the header) */}
-          <button className="relative text-slate-300 hover:text-white transition-colors" title="Notifications">
+          {/* Notifications button - Unread Messages */}
+          <Link to="/message" className="relative text-white hover:text-startx-300 transition-colors" title={`${unreadCount} unread messages`}>
             {icons.bell}
-            <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-dark-900"></span>
-          </button>
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 ring-2 ring-dark-900 flex items-center justify-center text-xs font-bold text-white">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+          </Link>
           <SignedOut>
             <button 
               onClick={() => openAuthModal('signin')}

@@ -5,71 +5,36 @@ const InterviewSetupModal = ({ isOpen, onClose, onStart, userLevel = 'moderate' 
 		questionCount: '10-15',
 		timeDuration: '15',
 		difficultyLevel: userLevel,
-		useSelfAssessment: false
+		useSelfAssessment: false,
+		company: '',
+		jobRole: '',
+		jobDescription: '',
+		interviewType: 'Technical'
 	})
 	const [showSelfAssessment, setShowSelfAssessment] = useState(false)
 	const [assessmentAnswers, setAssessmentAnswers] = useState({})
 	const [assessmentStep, setAssessmentStep] = useState(0)
+	const [assessmentQuestions, setAssessmentQuestions] = useState([])
+	const [loadingQuestions, setLoadingQuestions] = useState(false)
 
-	// Self-assessment questions
-	const assessmentQuestions = [
-		{
-			id: 'q1',
-			question: 'What is the time complexity of binary search?',
-			options: ['O(n)', 'O(log n)', 'O(n²)', 'O(1)'],
-			correct: 1,
-			difficulty: 3
-		},
-		{
-			id: 'q2',
-			question: 'What does the following JavaScript code output: console.log(typeof null)',
-			options: ['"null"', '"object"', '"undefined"', 'null'],
-			correct: 1,
-			difficulty: 2
-		},
-		{
-			id: 'q3',
-			question: 'Which React hook is used for side effects?',
-			options: ['useState', 'useEffect', 'useContext', 'useReducer'],
-			correct: 1,
-			difficulty: 2
-		},
-		{
-			id: 'q4',
-			question: 'What is the output of: [1,2,3].map(x => x * 2)',
-			options: ['[1,2,3]', '[2,4,6]', 'undefined', 'Error'],
-			correct: 1,
-			difficulty: 1
-		},
-		{
-			id: 'q5',
-			question: 'Which data structure uses LIFO (Last In First Out)?',
-			options: ['Queue', 'Stack', 'Array', 'Object'],
-			correct: 1,
-			difficulty: 2
-		},
-		{
-			id: 'q6',
-			question: 'What is the purpose of the virtual DOM in React?',
-			options: ['To store data', 'To improve performance', 'To handle events', 'To manage state'],
-			correct: 1,
-			difficulty: 3
-		},
-		{
-			id: 'q7',
-			question: 'What is the time complexity of quicksort in the average case?',
-			options: ['O(n)', 'O(n log n)', 'O(n²)', 'O(log n)'],
-			correct: 1,
-			difficulty: 4
-		},
-		{
-			id: 'q8',
-			question: 'What does CSS Grid allow you to do?',
-			options: ['Style text', 'Create 2D layouts', 'Animate elements', 'Handle events'],
-			correct: 1,
-			difficulty: 2
+
+    const loadAssessment = async () => {
+		try {
+			setLoadingQuestions(true)
+			const role = formData.jobRole || 'javascript'
+			const type = (formData.interviewType || 'Technical').toLowerCase()
+            const company = formData.company || ''
+            const desc = formData.jobDescription || ''
+            const res = await fetch(`/api/interview/assessment?role=${encodeURIComponent(role)}&type=${encodeURIComponent(type)}&company=${encodeURIComponent(company)}&description=${encodeURIComponent(desc)}`)
+			const qs = await res.json()
+			setAssessmentQuestions(qs)
+			setAssessmentStep(0)
+			setAssessmentAnswers({})
+			setShowSelfAssessment(true)
+		} finally {
+			setLoadingQuestions(false)
 		}
-	]
+	}
 
 	const calculateLevel = (answers) => {
 		let totalScore = 0
@@ -126,7 +91,30 @@ const InterviewSetupModal = ({ isOpen, onClose, onStart, userLevel = 'moderate' 
 						<h2 className="text-2xl font-bold text-slate-100 mb-6">Interview Setup</h2>
 						
 						<div className="space-y-6">
-							{/* Question Count */}
+					{/* Company & Job Details */}
+					<div>
+						<label className="block text-sm font-medium text-slate-300 mb-2">Company</label>
+						<input value={formData.company} onChange={(e)=>setFormData(p=>({...p, company: e.target.value}))} className="w-full p-3 rounded-lg border border-slate-600 bg-slate-700 text-slate-100" placeholder="e.g., Acme Corp" />
+					</div>
+					<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+						<div>
+							<label className="block text-sm font-medium text-slate-300 mb-2">Job Role</label>
+							<input value={formData.jobRole} onChange={(e)=>setFormData(p=>({...p, jobRole: e.target.value}))} className="w-full p-3 rounded-lg border border-slate-600 bg-slate-700 text-slate-100" placeholder="e.g., Full Stack Developer" />
+						</div>
+						<div>
+							<label className="block text-sm font-medium text-slate-300 mb-2">Interview Type</label>
+							<select value={formData.interviewType} onChange={(e)=>setFormData(p=>({...p, interviewType: e.target.value}))} className="w-full p-3 rounded-lg border border-slate-600 bg-slate-700 text-slate-100">
+								<option>Technical</option>
+								<option>HR</option>
+							</select>
+						</div>
+					</div>
+					<div>
+						<label className="block text-sm font-medium text-slate-300 mb-2">Role Description / Skills</label>
+						<textarea value={formData.jobDescription} onChange={(e)=>setFormData(p=>({...p, jobDescription: e.target.value}))} className="w-full p-3 rounded-lg border border-slate-600 bg-slate-700 text-slate-100" rows={3} placeholder="Tech stack, responsibilities, tools..." />
+					</div>
+
+					{/* Question Count */}
 							<div>
 								<label className="block text-sm font-medium text-slate-300 mb-2">
 									Number of Questions
@@ -196,28 +184,20 @@ const InterviewSetupModal = ({ isOpen, onClose, onStart, userLevel = 'moderate' 
 								</div>
 							</div>
 
-							{/* Self Assessment Option */}
-							<div className="flex items-center space-x-3">
-								<input
-									type="checkbox"
-									id="selfAssessment"
-									checked={formData.useSelfAssessment}
-									onChange={(e) => setFormData(prev => ({ ...prev, useSelfAssessment: e.target.checked }))}
-									className="w-4 h-4 text-blue-600 bg-slate-700 border-slate-600 rounded focus:ring-blue-500"
-								/>
-								<label htmlFor="selfAssessment" className="text-sm text-slate-300">
-									Take self-assessment quiz to auto-detect my level
-								</label>
-							</div>
+					{/* Self Assessment Option as dropdown */}
+					<div>
+						<label className="block text-sm font-medium text-slate-300 mb-2">Assessment</label>
+						<select value={formData.useSelfAssessment ? 'Self' : 'None'} onChange={(e)=>setFormData(p=>({...p, useSelfAssessment: e.target.value === 'Self'}))} className="w-full p-3 rounded-lg border border-slate-600 bg-slate-700 text-slate-100">
+							<option value="None">Skip (choose level manually)</option>
+							<option value="Self">Self-assessment (AI generated)</option>
+						</select>
+					</div>
 
-							{formData.useSelfAssessment && (
-								<button
-									onClick={() => setShowSelfAssessment(true)}
-									className="w-full p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium"
-								>
-									Start Self-Assessment Quiz
-								</button>
-							)}
+					{formData.useSelfAssessment && (
+						<button onClick={loadAssessment} disabled={loadingQuestions} className="w-full p-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg font-medium">
+							{loadingQuestions ? 'Preparing questions...' : 'Start Self-Assessment Quiz'}
+						</button>
+					)}
 						</div>
 
 						<div className="flex justify-end space-x-3 mt-6">
@@ -238,7 +218,7 @@ const InterviewSetupModal = ({ isOpen, onClose, onStart, userLevel = 'moderate' 
 				) : (
 					<>
 						<div className="flex justify-between items-center mb-6">
-							<h2 className="text-2xl font-bold text-slate-100">Self-Assessment Quiz</h2>
+						<h2 className="text-2xl font-bold text-slate-100">Self-Assessment Quiz</h2>
 							<span className="text-sm text-slate-400">
 								{assessmentStep + 1} of {assessmentQuestions.length}
 							</span>
@@ -255,11 +235,11 @@ const InterviewSetupModal = ({ isOpen, onClose, onStart, userLevel = 'moderate' 
 
 						<div className="space-y-4">
 							<h3 className="text-lg font-medium text-slate-100">
-								{assessmentQuestions[assessmentStep].question}
+							{assessmentQuestions[assessmentStep]?.question}
 							</h3>
 							
 							<div className="space-y-2">
-								{assessmentQuestions[assessmentStep].options.map((option, idx) => (
+								{(assessmentQuestions[assessmentStep]?.options || []).map((option, idx) => (
 									<button
 										key={idx}
 										onClick={() => handleAssessmentAnswer(assessmentQuestions[assessmentStep].id, idx)}
@@ -284,10 +264,10 @@ const InterviewSetupModal = ({ isOpen, onClose, onStart, userLevel = 'moderate' 
 							</button>
 							<button
 								onClick={nextAssessmentQuestion}
-								disabled={assessmentAnswers[assessmentQuestions[assessmentStep].id] === undefined}
+							disabled={assessmentQuestions.length === 0 || assessmentAnswers[assessmentQuestions[assessmentStep]?.id] === undefined}
 								className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-lg font-medium"
 							>
-								{assessmentStep === assessmentQuestions.length - 1 ? 'Complete Assessment' : 'Next Question'}
+							{assessmentStep === Math.max(0, assessmentQuestions.length - 1) ? 'Complete Assessment' : 'Next Question'}
 							</button>
 						</div>
 					</>

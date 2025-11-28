@@ -521,6 +521,133 @@ function initNewsFeed() {
     }
 }
 
+// AI Session Overlay (Fullscreen) behaviors
+function initAISessionOverlay() {
+    const body = document.body;
+    const sessionOverlay = document.getElementById('ai-session');
+    const openSessionBtn = document.getElementById('open-session');
+    const endSessionBtn = document.getElementById('end-session');
+    const toggleMicBtn = document.getElementById('toggle-mic');
+    const toggleCamBtn = document.getElementById('toggle-cam');
+    const openEditorBtn = document.getElementById('open-editor');
+    const closeEditorBtn = document.getElementById('close-editor');
+    const editorPanel = document.getElementById('code-editor');
+    const userStatus = document.getElementById('user-status');
+
+    // May not exist on non-interview pages
+    if (!sessionOverlay || !openSessionBtn) return;
+
+    let editorUnlocked = false; // Unlock when AI asks coding question
+
+    function openSession() {
+        sessionOverlay.classList.add('active');
+        body.classList.add('session-active');
+    }
+
+    function closeSession() {
+        sessionOverlay.classList.remove('active');
+        body.classList.remove('session-active');
+        // Close editor if open
+        editorPanel && editorPanel.classList.remove('open');
+    }
+
+    function togglePressed(btn, onIcon, offIcon) {
+        const pressed = btn.getAttribute('aria-pressed') !== 'false';
+        const next = !pressed;
+        btn.setAttribute('aria-pressed', String(next));
+        const icon = btn.querySelector('i');
+        if (icon) {
+            icon.classList.remove(onIcon, offIcon);
+            icon.classList.add(next ? onIcon : offIcon);
+        }
+        return next;
+    }
+
+    // Open session
+    openSessionBtn.addEventListener('click', () => {
+        openSession();
+    });
+
+    // End session with confirm
+    if (endSessionBtn) {
+        endSessionBtn.addEventListener('click', () => {
+            const ok = confirm('End the interview session?');
+            if (ok) closeSession();
+        });
+    }
+
+    // Toggle mic
+    if (toggleMicBtn) {
+        toggleMicBtn.addEventListener('click', () => {
+            const on = togglePressed(toggleMicBtn, 'fa-microphone', 'fa-microphone-slash');
+            if (userStatus) {
+                const parts = userStatus.textContent.split('·');
+                const camChunk = parts[1] ? parts[1].trim() : 'Cam On';
+                userStatus.textContent = `${on ? 'Mic On' : 'Mic Off'} · ${camChunk}`;
+            }
+        });
+    }
+
+    // Toggle cam
+    if (toggleCamBtn) {
+        toggleCamBtn.addEventListener('click', () => {
+            const on = togglePressed(toggleCamBtn, 'fa-video', 'fa-video-slash');
+            if (userStatus) {
+                const parts = userStatus.textContent.split('·');
+                const micChunk = parts[0] ? parts[0].trim() : 'Mic On';
+                userStatus.textContent = `${micChunk} · ${on ? 'Cam On' : 'Cam Off'}`;
+            }
+        });
+    }
+
+    // Open editor (gated)
+    if (openEditorBtn) {
+        openEditorBtn.addEventListener('click', () => {
+            if (!editorUnlocked) {
+                showNotification('Please wait — the code editor will unlock once the AI interviewer asks a coding question.', 'info');
+                return;
+            }
+            editorPanel.classList.add('open');
+        });
+    }
+
+    // Close editor
+    if (closeEditorBtn) {
+        closeEditorBtn.addEventListener('click', () => {
+            editorPanel.classList.remove('open');
+        });
+    }
+
+    // Public hook to unlock editor later (e.g., when AI asks coding)
+    window.unlockInterviewEditor = function() {
+        editorUnlocked = true;
+        showNotification('Code editor unlocked for the coding question.', 'success');
+    };
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', (e) => {
+        if (!sessionOverlay.classList.contains('active')) return;
+        if (e.key === 'm' || e.key === 'M') {
+            e.preventDefault();
+            toggleMicBtn && toggleMicBtn.click();
+        } else if (e.key === 'c' || e.key === 'C') {
+            e.preventDefault();
+            toggleCamBtn && toggleCamBtn.click();
+        } else if (e.key === 'e' || e.key === 'E') {
+            e.preventDefault();
+            if (!editorUnlocked) {
+                showNotification('Please wait — the code editor will unlock for coding questions.', 'info');
+            } else {
+                if (editorPanel.classList.contains('open')) {
+                    editorPanel.classList.remove('open');
+                } else {
+                    editorPanel.classList.add('open');
+                }
+            }
+        }
+    });
+}
+
 // Initialize all functions when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     initThreeJS();
@@ -538,7 +665,8 @@ document.addEventListener('DOMContentLoaded', function() {
     initAIInterview();
     initProfileAnimations();
     initNewsFeed();
-    
+    initAISessionOverlay();
+
     // Handle window resize
     window.addEventListener('resize', onWindowResize);
 });
